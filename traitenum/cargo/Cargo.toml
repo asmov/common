@@ -1,0 +1,18 @@
+[package]
+name = "cargo-traitenum"
+authors = ["Asmov LLC"]
+description = "Cargo subcommands to generate traitenum traits and derive macros"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+colored = "2"
+convert_case = "0"
+proc-macro2 = "1"
+quote = "1"
+rustfmt = "0"
+syn = { version = "2", features = ["full"] }
+thiserror = "1"
+toml = { version = "0", features = ["display"] }
