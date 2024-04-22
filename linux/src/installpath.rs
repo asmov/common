@@ -11,7 +11,7 @@ pub struct InstallPathSuffix {
 #[derive(Debug)]
 pub enum InstallPath {
     /// Application is running out of its project directory.
-    /// Configuration and data live in the project's ".local/config" and ".local/data" directories, respectively.
+    /// Configuration and data live in the project's ".local/config" and ".local/share" directories, respectively.
     Project(InstallPathSuffix),
     /// Application is running from the /usr/local.
     /// Configuration lives in /usr/local/etc and data lives in /var/local.
@@ -23,7 +23,7 @@ pub enum InstallPath {
     /// Configuration and data live in the user's home per XDG specs: ~/.config and ~/.local/share respectively.
     Home(InstallPathSuffix),
     /// Application is running from a non-standard location.
-    /// Configuration and data live in the CWD's ".local/config" and ".local/data" directories, respectively.
+    /// Configuration and data live in the CWD's ".local/config" and ".local/share" directories, respectively.
     Working(InstallPathSuffix),
 }
 
@@ -38,7 +38,6 @@ impl InstallPath {
     const DOT_CONFIG: &'static str = ".config";
     const DOT_LOCAL: &'static str = ".local";
     const CONFIG: &'static str = "config";
-    const DATA: &'static str = "data";
     const SHARE: &'static str = "share";
     const SECRETS: &'static str = "secrets";
 
@@ -111,11 +110,11 @@ impl InstallPath {
 
     pub fn data_dir(&self) -> PathBuf {
         match self {
-            Self::Project(suffix) => Self::project_dir().join(Self::DOT_LOCAL).join(Self::DATA).join(suffix.data_dir),
+            Self::Project(suffix) => Self::project_dir().join(Self::DOT_LOCAL).join(Self::SHARE).join(suffix.data_dir),
             Self::SystemLocal(suffix) => PathBuf::from(Self::VAR_LOCAL).join(suffix.data_dir),
             Self::SystemGlobal(suffix) => PathBuf::from(Self::VAR).join(suffix.data_dir),
             Self::Home(suffix) => Self::home_dir().join(Self::DOT_LOCAL).join(Self::SHARE).join(suffix.data_dir),
-            Self::Working(suffix) => Self::working_dir().join(Self::DOT_LOCAL).join(Self::DATA).join(suffix.data_dir),
+            Self::Working(suffix) => Self::working_dir().join(Self::DOT_LOCAL).join(Self::SHARE).join(suffix.data_dir),
         }
     }
 }
