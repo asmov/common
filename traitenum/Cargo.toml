@@ -1,0 +1,11 @@
+[workspace]
+resolver = "2"
+
+members = [
+    "lib",
+    "macro",
+    "cargo",
+    "tests/exporter/lib",
+    "tests/exporter/derive",
+    "tests/importer",
+]

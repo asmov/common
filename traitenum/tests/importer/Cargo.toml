@@ -1,0 +1,8 @@
+[package]
+name = "traitenum-test-importer"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+traitenum-test-exporter = { version = "0.1.0", path = "../exporter/lib" }
+traitenum-test-exporter-derive = { version = "0.1.0", path = "../exporter/derive" }
