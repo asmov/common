@@ -1,0 +1,105 @@
+
+fn add(left: u64, right: u64) -> u64 {
+    left + right
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+
+    use super::*;
+    use asmov_testing as testing;
+    use testing::UseCase;
+
+    const TESTING_NAME_EXT: &'static str = "integration_extend_all_ext";
+
+    const EXT: &'static str = "ext";
+
+    const TESTING_STR: &'static str = "testing";
+    const FIXTURES: &'static str = "fixtures";
+    
+    static TESTING: testing::StaticModule = testing::module(|| {
+        testing::integration(module_path!())
+            .setup(testing_setup)
+            .teardown_static(testing_teardown)
+            .build()
+    });
+
+    static TESTGROUP_ALPHA: testing::StaticGroup = testing::group(|| {
+        TESTING.group("alpha")
+            .setup(testgroup_alpha_setup)
+            .teardown(testgroup_alpha_teardown)
+            .build()
+    });
+
+    fn testing_setup(_module: &mut testing::Module) {
+        println!("testing_setup()");
+    }
+
+    extern fn testing_teardown() {
+        println!("testing_teardown()");
+        TESTING.teardown();
+    }
+
+    fn testgroup_alpha_setup() {
+
+    }
+
+    fn testgroup_alpha_teardown() {
+
+    }
+
+    fn fixture_dir() -> PathBuf {
+        PathBuf::from(TESTING_STR).join(FIXTURES)
+    }
+
+    #[test]
+    pub fn test_integration_fixture_dir() {
+        let fixture_dir = fixture_dir()
+            .join(testing::UseCase::Integration.to_str())
+            .join(EXT)
+            .join(TESTING_NAME_EXT)
+            .canonicalize().unwrap();
+
+        assert_eq!(fixture_dir, TESTING.fixture_dir(), "Module fixture dir should reflect override");
+    }
+
+    #[test]
+    pub fn test_extend_all_closures() {
+        const NAME: &'static str = "test_extend_all_closures";
+        const NAME_EXT: &'static str = "test_extend_all_closures_ext";
+
+        let mut setup_called = false;  
+        let mut teardown_called = false;
+
+        {
+            let test = TESTING.test(NAME)
+                .setup(|_| {
+                    setup_called = true;
+                })
+                .teardown(|_| {
+                    teardown_called = true;
+                })
+                .build();
+
+            assert_eq!(2, add(1,1));
+            assert_eq!(NAME, test.name(), "Test name");
+            assert_eq!(std::env::temp_dir().join(NAME_EXT), test.temp_dir(), "Test temp dir");
+            let expected_fixture_dir = fixture_dir().join(UseCase::Integration.to_str()).join(NAME_EXT).canonicalize().unwrap();
+            assert_eq!(expected_fixture_dir, test.fixture_dir(), "Fixture directory");
+        }
+
+        assert_eq!(true, setup_called, "Test setup() should be called");
+        assert_eq!(true, teardown_called, "Test teardown() should be called");
+    }
+
+    #[test]
+    pub fn test_set_extend_all() {
+        let _test = TESTGROUP_ALPHA.test("test_set_extend_all")
+            .setup(|_| {})
+            .teardown(|_| {})
+            .build();
+
+        assert_eq!(2, add(1,1));
+    }
+}

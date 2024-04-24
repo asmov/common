@@ -8,4 +8,5 @@ members = [
     "traitenum/tests/exporter/lib",
     "traitenum/tests/exporter/derive",
     "traitenum/tests/importer",
+    "testing"
 ]
