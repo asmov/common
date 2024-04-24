@@ -2,7 +2,7 @@
 resolver = "2"
 members = [
     "linux",
-    "traitenum/lib"
+    "traitenum/lib",
     "traitenum/macro",
     "traitenum/cargo",
     "traitenum/tests/exporter/lib",
