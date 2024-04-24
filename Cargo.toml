@@ -1,5 +1,11 @@
 [workspace]
 resolver = "2"
 members = [
-    "linux"
+    "linux",
+    "traitenum/lib"
+    "traitenum/macro",
+    "traitenum/cargo",
+    "traitenum/tests/exporter/lib",
+    "traitenum/tests/exporter/derive",
+    "traitenum/tests/importer",
 ]
