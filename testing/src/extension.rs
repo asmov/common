@@ -150,7 +150,7 @@ ExtensionBuilder<'module,'group,'grpfunc,'func> {
     }
 }
 
-pub trait ExtensionTrait {
+pub trait ExtensionTrait: Send + Sync {
     fn extension_path() -> &'static str where Self: Sized;
     fn extension_path_self(&self) -> &'static str;
 }
