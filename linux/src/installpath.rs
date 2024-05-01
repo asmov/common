@@ -1,5 +1,4 @@
 use std::path::{Path, PathBuf};
-use home;
 
 #[derive(Debug, Clone, Copy)]
 pub struct InstallPathSuffix {
@@ -69,6 +68,7 @@ impl InstallPath {
 
     /// The user environment's $HOME directory.
     pub fn home_dir() -> PathBuf {
+        //env!("HOME").into()
         home::home_dir().unwrap()
     }
 
