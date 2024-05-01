@@ -1,0 +1,11 @@
+[package]
+name = "traitenum-test-exporter"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+traitenum = { version = "0.1.0", path = "../../../macro" }
+
+[dev-dependencies]
+bincode = "1.3.3"
+traitenum-lib = { version = "0.1.0", path = "../../../lib" }
