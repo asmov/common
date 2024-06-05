@@ -158,7 +158,7 @@ After construction, a model's `temp_dir()` can then be used retrieve the pre-cre
 
 
 License (GPL 3)
-===============================================================================
+-------------------------------------------------------------------------------
 Asmov Testing: A toolkit for organized testing in Rust  
 Copyright (C) 2023 Asmov LLC
 
@@ -174,3 +174,12 @@ GNU General Public License for more details.
 
 You should have received a [copy](./COPYING.txt) of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+Third-Party Licenses
+-------------------------------------------------------------------------------
+## crate: [function_name](https://crates.io/crates/function_name)
+
+>Our library publically exports the **named** macro from [Daniel Henry-Mantilla](https://github.com/danielhenrymantilla)'s crate: [function_name](https://github.com/danielhenrymantilla/rust-function_name). It is available for use from our crate as `asmov_testing::named`.
+
+**License (MIT):**  
+[Copyright (c) 2019 Daniel Henry-Mantilla](./docs/licenses/danielhenrymantilla/function_name/LICENSE.txt)
