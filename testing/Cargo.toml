@@ -1,6 +1,6 @@
 [package]
 name = "asmov-testing"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 description = "Creates a backup .bak copy of a file"
 authors = ["Asmov LLC <development.pub@asmov.software>"]
