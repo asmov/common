@@ -5,7 +5,7 @@
 use std::ffi::OsStr;
 use std::path::{PathBuf, Path};
 use once_cell::sync::Lazy;
-use std::sync::{Mutex};
+use std::sync::Mutex;
 use anyhow::{self, bail, Context};
 use rand::{self, Rng};
 
@@ -140,7 +140,7 @@ impl<'func> ModuleBuilder<'func> {
     }
 
     pub fn build(self) -> Module {
-        let namepath = Namepath::module(self.module_path);
+        let namepath = Namepath::module(self.use_case, self.module_path);
 
         let base_temp_dir;
         let temp_dir = if self.using_temp_dir {

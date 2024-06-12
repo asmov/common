@@ -52,7 +52,7 @@
 //! File fixtures for testing purposes may be stored (by default) relative to the crate's project directory in `./testing/fixtures`.
 //! 
 //! The file structure within the base fixture directory reflects the test model's use-case and heirarchy:
-//! ```
+//! ```bash
 //! ./ testing / fixtures /
 //!      [ unit | integration | benchmark ] /
 //!        { module } /
@@ -60,7 +60,7 @@
 //!            { test }
 //! ```
 //! 
-//! The default fixture path for a model mirrors its heirarchy and namepath.
+//! The default fixture path f/or a model mirrors its heirarchy and namepath.
 //! 
 //! It is an error to build a test model with a fixture path that does not exist.
 //! 
@@ -126,7 +126,7 @@ pub fn benchmark(module_path: &str) -> ModuleBuilder {
     ModuleBuilder::new(module_path, UseCase::Benchmark)
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum UseCase {
     Unit,
     Integration,

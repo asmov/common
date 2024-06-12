@@ -1,5 +1,5 @@
 use std::path::{PathBuf, Path};
-use crate::{Module, Group};
+use crate::{Module, Group, UseCase};
 
 pub trait NamepathTrait {
     fn module_path(&self) -> &str;
@@ -52,29 +52,31 @@ impl NamepathTrait for ModuleNamepath {
 
 // Strips the crate name prefix and the test/tests suffix from a module_path!().
 // If the path is from lib.rs, the crate name is returned. 
-fn make_testing_path(path: &str) -> Option<&str> {
-    static REGEX_MODULE: once_cell::sync::OnceCell<regex::Regex> = once_cell::sync::OnceCell::new();
-    static REGEX_CRATE: once_cell::sync::OnceCell<regex::Regex> = once_cell::sync::OnceCell::new();
-    let regex_module = REGEX_MODULE.get_or_init(|| {
-        regex::Regex::new(r"^\w+::(.+?)(?:::test|::tests)?$").unwrap()
+fn make_testing_path(use_case: UseCase, path: &str) -> Option<&str> {
+    static REGEX_INTEGRATION: once_cell::sync::OnceCell<regex::Regex> = once_cell::sync::OnceCell::new();
+    static REGEX_UNIT: once_cell::sync::OnceCell<regex::Regex> = once_cell::sync::OnceCell::new();
+    let regex_integration = REGEX_INTEGRATION.get_or_init(|| {
+        regex::Regex::new(r"^(.+?)(?:::tests)?$").unwrap()
     });
-    let regex_crate = REGEX_CRATE.get_or_init(|| {
-        regex::Regex::new(r"^\w+(?:::test|::tests)?$").unwrap()
+    let regex_unit= REGEX_UNIT.get_or_init(|| {
+        regex::Regex::new(r"^\w+::(.+?)(?:::tests)?$").unwrap()
     });
 
-    if let Some(captures) = regex_module.captures(path) {
-        Some(captures.get(1).unwrap().as_str())
-    } else if let Some(captures) = regex_crate.captures(path) {
-        Some(captures.get(1).unwrap().as_str())
-    } else {
-        None
+    let captures = match use_case {
+        UseCase::Integration | UseCase::Benchmark => regex_integration.captures(path),
+        UseCase::Unit => regex_unit.captures(path)
+    };
+
+    match captures {
+        Some(captures) => Some(captures.get(1).unwrap().as_str()),
+        None => None
     }
 }
 
 impl ModuleNamepath {
-    pub fn new(module_path: String) -> Self {
+    pub fn new(use_case: UseCase, module_path: String) -> Self {
         Self {
-            testing_path: String::from(make_testing_path(&module_path).unwrap()),
+            testing_path: String::from(make_testing_path(use_case, &module_path).unwrap()),
             module_path
         }
     }
@@ -107,7 +109,7 @@ impl GroupNamepath {
         let module_path = module.namepath().module_path().to_owned();
         Self {
             path: join(&module_path, &name),
-            testing_path: join(make_testing_path(&module_path).unwrap(), &name),
+            testing_path: join(make_testing_path(module.use_case, &module_path).unwrap(), &name),
             module_path,
             name
         }
@@ -156,13 +158,13 @@ impl TestNamepath {
             Some(group) => {
                 let grp_name = group.name().to_owned();
                 path = join_three(&module_path, &grp_name, &name);
-                testing_path = join_three(make_testing_path(&module_path).unwrap(), &grp_name, &name);
+                testing_path = join_three(make_testing_path(module.use_case, &module_path).unwrap(), &grp_name, &name);
                 group_name = Some(grp_name);
             },
             None =>  {
                 group_name = None;
                 path = join(&module_path, &name);
-                testing_path = join(make_testing_path(&module_path).unwrap(), &name);
+                testing_path = join(make_testing_path(module.use_case, &module_path).unwrap(), &name);
             }
         }
 
@@ -185,8 +187,8 @@ impl TestNamepath {
 }
 
 impl Namepath {
-    pub fn module(module_path: String) -> Self {
-        Self::Module(ModuleNamepath::new(module_path))
+    pub fn module(use_case: UseCase, module_path: String) -> Self {
+        Self::Module(ModuleNamepath::new(use_case, module_path))
     }
 
     pub fn group(module: &Module, name: String) -> Self {
