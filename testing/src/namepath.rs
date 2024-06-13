@@ -1,4 +1,4 @@
-use std::path::{PathBuf, Path};
+use std::{path::{PathBuf, Path}, hash::Hash};
 use crate::{Module, Group, UseCase};
 
 pub trait NamepathTrait {
@@ -23,14 +23,14 @@ pub trait NamepathTrait {
     }
 }
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone, Hash)]
 pub enum Namepath {
     Module(ModuleNamepath),
     Group(GroupNamepath),
     Test(TestNamepath),
 }
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone, Hash)]
 pub struct ModuleNamepath {
     module_path: String,
     testing_path: String
@@ -75,14 +75,17 @@ fn make_testing_path(use_case: UseCase, path: &str) -> Option<&str> {
 
 impl ModuleNamepath {
     pub fn new(use_case: UseCase, module_path: String) -> Self {
+        let testing_path = make_testing_path(use_case, &module_path)
+            .expect(&format!("Unable to form namepath from {} module path: {module_path}", use_case.to_str()));
+
         Self {
-            testing_path: String::from(make_testing_path(use_case, &module_path).unwrap()),
+            testing_path: String::from(testing_path),
             module_path
         }
     }
 }
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone, Hash)]
 pub struct GroupNamepath {
     module_path: String,
     name: String,
@@ -107,9 +110,12 @@ impl NamepathTrait for GroupNamepath {
 impl GroupNamepath {
     pub fn new(module: &Module, name: String) -> Self {
         let module_path = module.namepath().module_path().to_owned();
+        let testing_path = make_testing_path(module.use_case, &module_path)
+            .expect(&format!("Unable to form group namepath from module path: {module_path}"));
+
         Self {
             path: join(&module_path, &name),
-            testing_path: join(make_testing_path(module.use_case, &module_path).unwrap(), &name),
+            testing_path: join(testing_path, &name),
             module_path,
             name
         }
@@ -124,7 +130,7 @@ impl GroupNamepath {
     }
 }
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone, Hash)]
 pub struct TestNamepath {
     module_path: String,
     group_name: Option<String>,
@@ -150,6 +156,8 @@ impl NamepathTrait for TestNamepath {
 impl TestNamepath {
     pub fn new(module: &Module, group: Option<&Group>, name: String) -> Self {
         let module_path = module.namepath().module_path().to_owned();
+        let module_testing_path = make_testing_path(module.use_case, &module_path)
+            .expect(&format!("Unable to form test namepath from module path: {module_path}"));
         let group_name;
         let path;
         let testing_path;
@@ -158,13 +166,13 @@ impl TestNamepath {
             Some(group) => {
                 let grp_name = group.name().to_owned();
                 path = join_three(&module_path, &grp_name, &name);
-                testing_path = join_three(make_testing_path(module.use_case, &module_path).unwrap(), &grp_name, &name);
+                testing_path = join_three(module_testing_path, &grp_name, &name);
                 group_name = Some(grp_name);
             },
             None =>  {
                 group_name = None;
                 path = join(&module_path, &name);
-                testing_path = join(make_testing_path(module.use_case, &module_path).unwrap(), &name);
+                testing_path = join(module_testing_path, &name);
             }
         }
 

@@ -1,13 +1,14 @@
-use std::path::{PathBuf, Path};
+use std::{collections::HashMap, path::{PathBuf, Path}};
 use anyhow::Context;
 
-use crate::{Module, TestBuilder, Namepath };
+use crate::{Testable, Module, TestBuilder, Namepath };
 
 pub struct Group<'module,'func> {
     pub(crate) module: &'module Module,
     pub(crate) namepath: Namepath,
     pub(crate) temp_dir: Option<PathBuf>,
     pub(crate) fixture_dir: Option<PathBuf>,
+    pub(crate) imported_fixture_dirs: Option<HashMap<Namepath, PathBuf>>,
     pub(crate) teardown_func: Option<Box<dyn FnOnce(&mut Group) + Sync + Send + 'func>>,
 }
 
@@ -35,8 +36,15 @@ impl<'module,'func> Group<'module,'func> {
         &self.temp_dir.as_ref().context("Group `temp dir` is not configured").unwrap()
     }
 
-    pub fn fixture_dir(&self) -> &Path {
-        &self.fixture_dir.as_ref().context("Group `fixture dir` is not configured").unwrap()
+    pub(crate) fn try_imported_fixture_dir(&self, namepath: &Namepath) -> anyhow::Result<&Path> {
+        if let Some(imported_fixture_dirs) = self.imported_fixture_dirs.as_ref() {
+            if let Some(dir) = imported_fixture_dirs.get(namepath) {
+                return Ok(dir.as_path());
+            }
+        }
+
+        self.module.try_imported_fixture_dir(namepath)
+            .context("Group: `imported fixture dirs` is not configured")
     }
 
     fn teardown(&mut self) {
@@ -49,6 +57,16 @@ impl<'module,'func> Group<'module,'func> {
                 eprintln!("Unable to delete temp dir: {}", dir.to_str().unwrap());
             }
         }
+    }
+}
+
+impl<'module, 'func> Testable for Group<'module, 'func> {
+    fn fixture_dir(&self) -> &Path {
+        &self.fixture_dir.as_ref().context("Group `fixture dir` is not configured").unwrap()
+    }
+    
+    fn imported_fixture_dir(&self, namepath: &Namepath) -> &Path {
+        self.try_imported_fixture_dir(namepath).unwrap()
     }
 }
 
@@ -66,6 +84,7 @@ pub struct GroupBuilder<'module,'func> {
     pub(crate) inherit_temp_dir: bool,
     pub(crate) using_fixture_dir: bool,
     pub(crate) inherit_fixture_dir: bool,
+    pub(crate) imported_fixture_dirs: Option<HashMap<Namepath, PathBuf>>,
     pub(crate) setup_func: Option<Box<dyn FnOnce(&mut Group) + 'func>>,
     pub(crate) teardown_func: Option<Box<dyn FnOnce(&mut Group) + Sync + Send + 'func>>,
     pub(crate) static_teardown_func: Option<Box<extern fn()>>,
@@ -84,6 +103,7 @@ impl<'module,'func> GroupBuilder<'module,'func> {
             inherit_temp_dir: false,
             using_fixture_dir: false,
             inherit_fixture_dir: false,
+            imported_fixture_dirs: None,
             setup_func: None,
             teardown_func: None,
             static_teardown_func: None,
@@ -94,7 +114,7 @@ impl<'module,'func> GroupBuilder<'module,'func> {
         let namepath = Namepath::group(&self.module, self.name);
 
         let temp_dir = if self.using_temp_dir {
-            Some( crate::build_temp_dir(&namepath, &self.module.base_temp_dir()) )
+            Some(crate::build_temp_dir(&namepath, &self.module.base_temp_dir()))
         } else if self.inherit_temp_dir {
             Some(self.module.temp_dir().to_owned())
         } else {
@@ -102,18 +122,21 @@ impl<'module,'func> GroupBuilder<'module,'func> {
         };
 
         let fixture_dir = if self.using_fixture_dir {
-            Some( crate::build_fixture_dir(&namepath, &self.module.use_case) )
+            Some(crate::build_fixture_dir(&namepath, self.module.use_case))
         } else if self.inherit_fixture_dir {
             Some(self.module.fixture_dir().to_owned())
         } else {
             None
         };
 
+        let imported_fixture_dirs = self.imported_fixture_dirs;
+
         let mut group = Group {
             module: self.module,
             namepath: namepath,
             temp_dir,
             fixture_dir,
+            imported_fixture_dirs,
             teardown_func: self.teardown_func
         };
 
@@ -155,6 +178,22 @@ impl<'module,'func> GroupBuilder<'module,'func> {
         self
     }
 
+    pub fn import_fixture_dir(mut self, namepath: &Namepath) -> Self {
+        let dir = crate::build_fixture_dir(&namepath, self.module.use_case);
+        let dir = dir.canonicalize()
+            .context(format!("Imported fixture dir does not exist: {}", &dir.to_str().unwrap()))
+            .unwrap();
+
+        if self.imported_fixture_dirs.is_none() {
+            self.imported_fixture_dirs = Some(HashMap::new());
+        }
+
+        self.imported_fixture_dirs.as_mut().expect("Option should exist")
+            .insert(namepath.to_owned(), dir);
+        
+        self
+    }
+
     pub fn inherit_fixture_dir(mut self) -> Self {
         assert!(!self.using_fixture_dir);
         self.inherit_fixture_dir = true;
@@ -181,8 +220,8 @@ impl<'module,'func> GroupBuilder<'module,'func> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{self as testing, NamepathTrait, Group};
-    use function_name::named;
+    use std::path::PathBuf;
+    use crate::{self as testing, prelude::*, UseCase, NamepathTrait, Namepath, Group};
 
     static MODULE_BASIC: testing::StaticModule = testing::module(|| {
         testing::unit(module_path!())
@@ -329,7 +368,52 @@ mod tests {
         assert!(testgroup.fixture_dir().exists(),
             "Fixture path should exist for Group configured with `inherit_fixture_dir()`");
     }
-    
+
+    #[test] #[named]
+    fn test_import_fixture_dir() {
+        let testgroup = MODULE_BASIC.local_group(function_name!())
+            .import_fixture_dir(&MODULE_WITH_DIRS.namepath())
+            .build();
+
+        assert_eq!(MODULE_WITH_DIRS.fixture_dir(), testgroup.imported_fixture_dir(MODULE_WITH_DIRS.namepath()),
+            "Group should import external fixture dir");
+    }
+
+    #[test] #[named] #[should_panic]
+    fn test_import_fixture_dir_fail() {
+        let testgroup = MODULE_BASIC.local_group(function_name!())
+            .build();
+
+        testgroup.imported_fixture_dir(MODULE_WITH_DIRS.namepath()); // should panic
+    }
+
+    fn unit_module_namepath() -> Namepath {
+        Namepath::module(UseCase::Unit, "asmov_testing::module".to_string())
+    }
+
+    fn expected_unit_module_fixture_dir() -> PathBuf {
+        PathBuf::from(crate::strings::TESTING).join(crate::strings::FIXTURES)
+            .join(UseCase::Unit.to_str())
+            .join("module")
+            .canonicalize()
+            .unwrap()
+    }
+
+    #[test] #[named]
+    fn test_module_lookup_imported_fixture_dir() {
+        let namepath = unit_module_namepath();
+        let test_module = testing::unit(module_path!())
+            .import_fixture_dir(&namepath)
+            .nonstatic()
+            .build();
+        let test_group = test_module.local_group(function_name!())
+            .build();
+
+        assert_eq!(expected_unit_module_fixture_dir(), test_group.imported_fixture_dir(&namepath),
+            "Group should lookup external fixture dir in parent module");
+    }
+
+     
     // unsafe: This can only be called once, by `test_setup_function()`. Not thread safe.
     static mut SETUP_FUNC_CALLED: bool = false;
     fn setup_func(_group: &mut Group) {
@@ -440,5 +524,6 @@ mod tests {
             .teardown(|_| {}) // should panic
             .build();
     }
+
 
 }

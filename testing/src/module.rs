@@ -2,17 +2,11 @@
 //! Testing for a module
 //! This is testing
 
-use std::ffi::OsStr;
-use std::path::{PathBuf, Path};
+use std::{collections::HashMap, ffi::OsStr, path::{PathBuf, Path}, sync::Mutex};
 use once_cell::sync::Lazy;
-use std::sync::Mutex;
 use anyhow::{self, bail, Context};
 use rand::{self, Rng};
-
-use crate::{UseCase, NamepathTrait};
-use crate::GroupBuilder;
-use crate::TestBuilder;
-use crate::namepath::Namepath;
+use crate::{UseCase, Testable, NamepathTrait, GroupBuilder, TestBuilder, namepath::Namepath};
 
 const MAX_RAND_DIR_RETRIES: i32 = 64;
 const MAX_RAND_DIR_CHARS: i32 = 8;
@@ -23,7 +17,8 @@ pub struct Module {
     pub(crate) use_case: UseCase,
     pub(crate) base_temp_dir: Option<PathBuf>,
     pub(crate) temp_dir: Option<PathBuf>,
-    pub(crate) fixture_dir: Option<PathBuf>
+    pub(crate) fixture_dir: Option<PathBuf>,
+    pub(crate) imported_fixture_dirs: Option<HashMap<Namepath, PathBuf>>
 }
 
 impl Module {
@@ -43,10 +38,6 @@ impl Module {
         &self.temp_dir.as_ref().context("Module `temp dir` is not configured").unwrap()
     }
 
-    pub fn fixture_dir(&self) -> &Path {
-        &self.fixture_dir.as_ref().context("Module `fixture dir` is not configured").unwrap()
-    }
-
     // Creates a GroupBuilder configured as static. This is the expected usage.
     pub fn group(&self, name: &str) -> GroupBuilder {
         GroupBuilder::new(self, name, true) 
@@ -62,12 +53,30 @@ impl Module {
         TestBuilder::new(&self, None, name)
     }
 
+    pub(crate) fn try_imported_fixture_dir(&self, namepath: &Namepath) -> anyhow::Result<&Path> {
+        Ok(self.imported_fixture_dirs.as_ref()
+            .context("Module `imported fixture dirs` is not configured")?
+            .get(namepath)
+            .context(format!("Imported fixture dir not found for namepath: {}", namepath.path()))?
+            .as_path())
+    }
+
     fn teardown(&mut self) {
         let mut teardown = Teardown {
             base_temp_dir: self.base_temp_dir.take()
         };
 
         teardown.destroy();
+    }
+}
+
+impl Testable for Module {
+    fn fixture_dir(&self) -> &Path {
+        &self.fixture_dir.as_ref().context("Module `fixture dir` is not configured").unwrap()
+    }
+
+    fn imported_fixture_dir(&self, namepath: &Namepath) -> &Path {
+        self.try_imported_fixture_dir(namepath).unwrap()
     }
 }
 
@@ -97,6 +106,7 @@ pub struct ModuleBuilder<'func> {
     pub(crate) base_temp_dir: PathBuf,
     pub(crate) using_temp_dir: bool,
     pub(crate) using_fixture_dir: bool,
+    pub(crate) imported_fixture_dirs: Option<HashMap<Namepath, PathBuf>>,
     pub(crate) setup_func: Option<Box<dyn FnOnce(&mut Module) + 'func>>,
     pub(crate) static_teardown_func: Option<Box<extern fn()>>,
     pub(crate) is_static: bool 
@@ -110,6 +120,7 @@ impl<'func> ModuleBuilder<'func> {
             base_temp_dir: std::env::temp_dir(),
             using_temp_dir: false,
             using_fixture_dir: false,
+            imported_fixture_dirs: None,
             setup_func: None,
             static_teardown_func: None,
             is_static: true,
@@ -155,17 +166,20 @@ impl<'func> ModuleBuilder<'func> {
         };
 
         let fixture_dir = if self.using_fixture_dir {
-            Some( crate::build_fixture_dir(&namepath, &self.use_case) )
+            Some( crate::build_fixture_dir(&namepath, self.use_case) )
         } else {
             None
         };
+
+        let imported_fixture_dirs = self.imported_fixture_dirs;
 
         let mut module = Module {
             namepath,
             use_case: self.use_case,
             base_temp_dir,
             temp_dir,
-            fixture_dir
+            fixture_dir,
+            imported_fixture_dirs
         };
 
         if let Some(setup_fn) = self.setup_func {
@@ -208,11 +222,26 @@ impl<'func> ModuleBuilder<'func> {
         self
     }
 
+    pub fn import_fixture_dir(mut self, namepath: &Namepath) -> Self {
+        let dir = crate::build_fixture_dir(&namepath, self.use_case);
+        let dir = dir.canonicalize()
+            .context(format!("Imported fixture dir does not exist: {}", &dir.to_str().unwrap()))
+            .unwrap();
+
+        if self.imported_fixture_dirs.is_none() {
+            self.imported_fixture_dirs = Some(HashMap::new());
+        }
+
+        self.imported_fixture_dirs.as_mut().expect("Option should exist")
+            .insert(namepath.to_owned(), dir);
+        
+        self
+    }
+
     pub fn using_temp_dir(mut self) -> Self {
         self.using_temp_dir = true;
         self
     }
-
 
     pub fn setup(mut self, func: impl FnOnce(&mut Module) + 'func) -> Self {
         self.setup_func = Some(Box::new(func));
@@ -244,8 +273,8 @@ static STATIC_TEARDOWN_QUEUE: Lazy<Mutex<Vec<Teardown>>> = Lazy::new(|| { Mutex:
 #[cfg(test)]
 mod tests {
     use std::path::PathBuf;
-    use crate::{self as testing, NamepathTrait, UseCase, strings, namepath};
-    use function_name::named;
+    use crate::prelude::*;
+    use crate::{self as testing, NamepathTrait, UseCase, Namepath, strings, namepath};
 
     #[test] #[should_panic]
     // Should panic if attempting to retrieve the temp_dir() without having configured one manually or by calling ensure_temp_dir().
@@ -386,24 +415,53 @@ mod tests {
             "Module configured with `using_temp_dir()` should create the temp directory on construction.");
     }
 
+    fn expected_unit_module_fixture_dir() -> PathBuf {
+        PathBuf::from(strings::TESTING).join(strings::FIXTURES)
+            .join(UseCase::Unit.to_str())
+            .join("module")
+            .canonicalize()
+            .unwrap()
+    }
+
     // Module configured with `using_fixture_dir()` should have a fixture path:
     //     testing / fixtures / `Module.use_case()` / `Module::namepath().dir()`
     // Module configured with `using_fixture_dir()` should have a pre-existing fixture dir
     #[test]
     fn test_fixture_dir_using() {
-        let expected_fixture_dir = PathBuf::from(strings::TESTING).join(strings::FIXTURES)
-            .join(UseCase::Unit.to_str())
-            .join("module") // equivalent to Namepath::relative_base_module_path()
-            .canonicalize().unwrap();
-
         let unit = testing::unit(module_path!()).using_fixture_dir().nonstatic().build();
 
-        assert_eq!(expected_fixture_dir, unit.fixture_dir(),
+        assert_eq!(expected_unit_module_fixture_dir(), unit.fixture_dir(),
             "Module configured with `using_fixture_dir` should have a fixture path: testing / fixtures / `Module.use_case()` / `Module.namepath().dir()`");
          assert!(unit.fixture_dir().exists(),
             "Module configured with `using_fixture_dir` should have a pre-existing fixture dir");
     }
 
+    fn unit_module_namepath() -> Namepath {
+        Namepath::module(UseCase::Unit, "asmov_testing::module".to_string())
+    }
+
+    #[test]
+    fn test_import_fixture_dir() {
+        let namepath = unit_module_namepath();
+        let test_module = testing::unit(module_path!())
+            .import_fixture_dir(&namepath)
+            .nonstatic()
+            .build();
+
+        assert_eq!(expected_unit_module_fixture_dir(), test_module.imported_fixture_dir(&namepath),
+            "Module should import external fixture dir");
+    }
+
+    #[test] #[should_panic]
+    fn test_import_fixture_dir_fail() {
+        let namepath = unit_module_namepath();
+        let test_module = testing::unit(module_path!())
+            .nonstatic()
+            .build();
+
+        test_module.imported_fixture_dir(&namepath); // should panic
+    }
+ 
     static mut SETUP_FUNC_CALLED: bool = false;
     fn setup_func(_module: &mut testing::Module) {
         unsafe {
