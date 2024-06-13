@@ -30,6 +30,10 @@ pub enum Namepath {
     Test(TestNamepath),
 }
 
+impl Eq for Namepath {
+
+}
+
 #[derive(PartialEq, Eq, Debug)]
 pub struct ModuleNamepath {
     module_path: String,

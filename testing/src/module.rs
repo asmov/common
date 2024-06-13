@@ -2,6 +2,7 @@
 //! Testing for a module
 //! This is testing
 
+use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::path::{PathBuf, Path};
 use once_cell::sync::Lazy;
@@ -23,7 +24,8 @@ pub struct Module {
     pub(crate) use_case: UseCase,
     pub(crate) base_temp_dir: Option<PathBuf>,
     pub(crate) temp_dir: Option<PathBuf>,
-    pub(crate) fixture_dir: Option<PathBuf>
+    pub(crate) fixture_dir: Option<PathBuf>,
+    pub(crate) imported_fixture_dirs: Option<HashMap<String, PathBuf>>
 }
 
 impl Module {
@@ -45,6 +47,15 @@ impl Module {
 
     pub fn fixture_dir(&self) -> &Path {
         &self.fixture_dir.as_ref().context("Module `fixture dir` is not configured").unwrap()
+    }
+
+    pub fn imported_fixture_dir(&self, module_path: &str) -> &Path {
+        self.imported_fixture_dirs.as_ref()
+            .context("Module `shared fixture dirs` is not configured").unwrap()
+            .get(module_path)
+            .context(format!("Imported fixture dir not found for namepath: {module_path}"))
+            .unwrap()
+            .as_path()
     }
 
     // Creates a GroupBuilder configured as static. This is the expected usage.
@@ -97,6 +108,7 @@ pub struct ModuleBuilder<'func> {
     pub(crate) base_temp_dir: PathBuf,
     pub(crate) using_temp_dir: bool,
     pub(crate) using_fixture_dir: bool,
+    pub(crate) imported_fixture_dirs: Option<HashMap<String, PathBuf>>,
     pub(crate) setup_func: Option<Box<dyn FnOnce(&mut Module) + 'func>>,
     pub(crate) static_teardown_func: Option<Box<extern fn()>>,
     pub(crate) is_static: bool 
@@ -110,6 +122,7 @@ impl<'func> ModuleBuilder<'func> {
             base_temp_dir: std::env::temp_dir(),
             using_temp_dir: false,
             using_fixture_dir: false,
+            imported_fixture_dirs: None,
             setup_func: None,
             static_teardown_func: None,
             is_static: true,
@@ -160,12 +173,20 @@ impl<'func> ModuleBuilder<'func> {
             None
         };
 
+        let fixture_dir = if self.using_fixture_dir {
+//TODO: usecase???
+            Some( crate::build_fixture_dir(&namepath, &self.use_case) )
+        } else {
+            None
+        };
+
         let mut module = Module {
             namepath,
             use_case: self.use_case,
             base_temp_dir,
             temp_dir,
-            fixture_dir
+            fixture_dir,
+            imported_fixture_dirs: self.imported_fixture_dirs
         };
 
         if let Some(setup_fn) = self.setup_func {
@@ -208,11 +229,23 @@ impl<'func> ModuleBuilder<'func> {
         self
     }
 
+    pub fn import_fixture_dir<P>(mut self, namepath: &str) -> Self
+    where
+        P: ?Sized + AsRef<OsStr>
+    {
+        let dir = make_fixture_dir(namepath);
+        let dir = dir.canonicalize()
+            .context(format!("Base temporary directory does not exist: {}", &dir.to_str().unwrap()))
+            .unwrap();
+
+        self.base_temp_dir = dir;
+        self
+    }
+
     pub fn using_temp_dir(mut self) -> Self {
         self.using_temp_dir = true;
         self
     }
-
 
     pub fn setup(mut self, func: impl FnOnce(&mut Module) + 'func) -> Self {
         self.setup_func = Some(Box::new(func));
