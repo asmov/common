@@ -74,7 +74,7 @@ Refer to [docs.rs/asmov-testing](https://docs.rs/asmov-testing/latest/asmov_test
 License (GPL 3)
 -------------------------------------------------------------------------------
 Asmov Testing: A toolkit for organized testing in Rust  
-Copyright (C) 2023 Asmov LLC
+Copyright (C) 2023-2024 Asmov LLC
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
