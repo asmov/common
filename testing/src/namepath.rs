@@ -56,7 +56,7 @@ fn make_testing_path(use_case: UseCase, path: &str) -> Option<&str> {
     static REGEX_INTEGRATION: once_cell::sync::OnceCell<regex::Regex> = once_cell::sync::OnceCell::new();
     static REGEX_UNIT: once_cell::sync::OnceCell<regex::Regex> = once_cell::sync::OnceCell::new();
     let regex_integration = REGEX_INTEGRATION.get_or_init(|| {
-        regex::Regex::new(r"^(.+?)(?:::tests)?$").unwrap()
+        regex::Regex::new(r"^(\w+?)(?:::tests)?$").unwrap()
     });
     let regex_unit= REGEX_UNIT.get_or_init(|| {
         regex::Regex::new(r"^\w+::(.+?)(?:::tests)?$").unwrap()

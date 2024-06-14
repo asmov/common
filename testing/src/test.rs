@@ -226,6 +226,22 @@ TestBuilder<'module,'group,'grpfunc,'func> {
         self
     }
 
+    pub fn import_fixture_dir(mut self, namepath: &Namepath) -> Self {
+        let dir = crate::build_fixture_dir(&namepath, self.module.use_case);
+        let dir = dir.canonicalize()
+            .context(format!("Imported fixture dir does not exist: {}", &dir.to_str().unwrap()))
+            .unwrap();
+
+        if self.imported_fixture_dirs.is_none() {
+            self.imported_fixture_dirs = Some(HashMap::new());
+        }
+
+        self.imported_fixture_dirs.as_mut().expect("Option should exist")
+            .insert(namepath.to_owned(), dir);
+        
+        self
+    }
+
     /// Configures the test to use a temporary directory.  
     /// The base path is defined by the parent Module or Group, with a subdirectory created just for this test (by its name).  
     pub fn using_temp_dir(mut self) -> Self {
@@ -281,7 +297,8 @@ TestBuilder<'module,'group,'grpfunc,'func> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{self as testing, prelude::*, NamepathTrait, Test};
+    use std::path::PathBuf;
+    use crate::{self as testing, prelude::*, NamepathTrait, Test, Namepath, UseCase};
 
     static MODULE_BASIC: testing::StaticModule = testing::module(|| {
         testing::unit(module_path!())
@@ -511,6 +528,68 @@ mod tests {
         assert!(test.fixture_dir().exists(),
             "Fixture path should exist for Test configured to `inherit_fixture_dir()` from Module");
     }
+
+    #[test] #[named]
+    fn test_import_fixture_dir() {
+        let test = MODULE_BASIC.test(function_name!())
+            .import_fixture_dir(&MODULE_WITH_DIRS.namepath())
+            .build();
+
+        assert_eq!(MODULE_WITH_DIRS.fixture_dir(), test.imported_fixture_dir(MODULE_WITH_DIRS.namepath()),
+            "Test should import external fixture dir");
+    }
+
+    #[test] #[named] #[should_panic]
+    fn test_import_fixture_dir_fail() {
+        let test = MODULE_BASIC.test(function_name!())
+            .build();
+
+        test.imported_fixture_dir(MODULE_WITH_DIRS.namepath()); // should panic
+    }
+
+    fn unit_module_namepath() -> Namepath {
+        Namepath::module(UseCase::Unit, "asmov_testing::module".to_string())
+    }
+
+    fn expected_unit_module_fixture_dir() -> PathBuf {
+        PathBuf::from(crate::strings::TESTING).join(crate::strings::FIXTURES)
+            .join(UseCase::Unit.to_str())
+            .join("module")
+            .canonicalize()
+            .unwrap()
+    }
+
+    #[test] #[named]
+    fn test_module_lookup_imported_fixture_dir() {
+        let expected_unit_module_fixture_dir = expected_unit_module_fixture_dir();
+        let namepath = unit_module_namepath();
+        let test_module = testing::unit(module_path!())
+            .import_fixture_dir(&namepath)
+            .nonstatic()
+            .build();
+        let test_group = test_module.local_group(function_name!()).build();
+        let test = test_group.test(function_name!()).build();
+
+        assert_eq!(expected_unit_module_fixture_dir, test.imported_fixture_dir(&namepath),
+            "Test should lookup external fixture dir in parent module");
+    }
+
+    #[test] #[named]
+    fn test_group_lookup_imported_fixture_dir() {
+        let expected_unit_module_fixture_dir = expected_unit_module_fixture_dir();
+        let namepath = unit_module_namepath();
+        let test_module = testing::unit(module_path!())
+            .nonstatic()
+            .build();
+        let test_group = test_module.local_group(function_name!())
+            .import_fixture_dir(&namepath)
+            .build();
+        let test = test_group.test(function_name!()).build();
+
+        assert_eq!(expected_unit_module_fixture_dir, test.imported_fixture_dir(&namepath),
+            "Test should lookup external fixture dir in parent group");
+    }
+
 
     // Test `parent()` should return its Module if configured without a Group.
     // Test `parent()` should return its Group if configured with one. 

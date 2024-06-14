@@ -225,7 +225,7 @@ impl<'func> ModuleBuilder<'func> {
     pub fn import_fixture_dir(mut self, namepath: &Namepath) -> Self {
         let dir = crate::build_fixture_dir(&namepath, self.use_case);
         let dir = dir.canonicalize()
-            .context(format!("Base temporary directory does not exist: {}", &dir.to_str().unwrap()))
+            .context(format!("Imported fixture dir does not exist: {}", &dir.to_str().unwrap()))
             .unwrap();
 
         if self.imported_fixture_dirs.is_none() {
@@ -274,7 +274,7 @@ static STATIC_TEARDOWN_QUEUE: Lazy<Mutex<Vec<Teardown>>> = Lazy::new(|| { Mutex:
 mod tests {
     use std::path::PathBuf;
     use crate::prelude::*;
-    use crate::{self as testing, NamepathTrait, UseCase, strings, namepath};
+    use crate::{self as testing, NamepathTrait, UseCase, Namepath, strings, namepath};
 
     #[test] #[should_panic]
     // Should panic if attempting to retrieve the temp_dir() without having configured one manually or by calling ensure_temp_dir().
@@ -415,24 +415,53 @@ mod tests {
             "Module configured with `using_temp_dir()` should create the temp directory on construction.");
     }
 
+    fn expected_unit_module_fixture_dir() -> PathBuf {
+        PathBuf::from(strings::TESTING).join(strings::FIXTURES)
+            .join(UseCase::Unit.to_str())
+            .join("module")
+            .canonicalize()
+            .unwrap()
+    }
+
     // Module configured with `using_fixture_dir()` should have a fixture path:
     //     testing / fixtures / `Module.use_case()` / `Module::namepath().dir()`
     // Module configured with `using_fixture_dir()` should have a pre-existing fixture dir
     #[test]
     fn test_fixture_dir_using() {
-        let expected_fixture_dir = PathBuf::from(strings::TESTING).join(strings::FIXTURES)
-            .join(UseCase::Unit.to_str())
-            .join("module") // equivalent to Namepath::relative_base_module_path()
-            .canonicalize().unwrap();
-
         let unit = testing::unit(module_path!()).using_fixture_dir().nonstatic().build();
 
-        assert_eq!(expected_fixture_dir, unit.fixture_dir(),
+        assert_eq!(expected_unit_module_fixture_dir(), unit.fixture_dir(),
             "Module configured with `using_fixture_dir` should have a fixture path: testing / fixtures / `Module.use_case()` / `Module.namepath().dir()`");
          assert!(unit.fixture_dir().exists(),
             "Module configured with `using_fixture_dir` should have a pre-existing fixture dir");
     }
 
+    fn unit_module_namepath() -> Namepath {
+        Namepath::module(UseCase::Unit, "asmov_testing::module".to_string())
+    }
+
+    #[test]
+    fn test_import_fixture_dir() {
+        let namepath = unit_module_namepath();
+        let test_module = testing::unit(module_path!())
+            .import_fixture_dir(&namepath)
+            .nonstatic()
+            .build();
+
+        assert_eq!(expected_unit_module_fixture_dir(), test_module.imported_fixture_dir(&namepath),
+            "Module should import external fixture dir");
+    }
+
+    #[test] #[should_panic]
+    fn test_import_fixture_dir_fail() {
+        let namepath = unit_module_namepath();
+        let test_module = testing::unit(module_path!())
+            .nonstatic()
+            .build();
+
+        test_module.imported_fixture_dir(&namepath); // should panic
+    }
+ 
     static mut SETUP_FUNC_CALLED: bool = false;
     fn setup_func(_module: &mut testing::Module) {
         unsafe {
