@@ -1,4 +1,4 @@
-//! # Model
+//! # Testable Model
 //! 
 //! Tests are modeled within a heirarchy:
 //! - `Module`
@@ -16,9 +16,9 @@
 //! 2. Integration tests
 //! 3. Benchmarks
 //! 
-//! Each model uses a builder pattern for construction.
+//! Each testable model uses a builder pattern for construction.
 //! 
-//! Each model holds a one-way reference to its parent in the heirarchy.
+//! Each testable holds a one-way reference to its parent in the heirarchy.
 //! 
 //! `Group` and `Test` models may inherit or override certain attributes from their parents in this heirarchy.
 //! 
@@ -67,10 +67,12 @@
 //! Fixture dirs must be explicitly configured during construction:
 //! - `using_fixture_dir()` uses a default calculated path.
 //! - `inherit_fixture_dir()` inherits the same path as its parent in the model heirarchy.
+//! - `import_fixture_dir(Namepath)` imports a fixture directory from another testable model.
 //! 
-//! The three aforementioned builder methods will verify that the configured path exists before construction.
+//! The aforementioned builder methods will verify that the configured path exists before construction.
 //! 
-//! After construction, a model's `fixture_dir()` can then be used retrieve the configured `Path`.
+//! After construction, a testable's [fixture_dir()](Testable::fixture_dir) can then be used retrieve the configured `Path`. Any imported fixture
+//! directories can be retrieved with [imported_fixture_dir()](Testable::imported_fixture_dir).
 //! 
 //! ## Temporary file directories
 //! 
@@ -86,6 +88,56 @@
 //! - `inherit_temp_dir()` inherits the same path as its parent in the model heirarchy.
 //! 
 //! After construction, a model's `temp_dir()` can then be used retrieve the pre-created `Path`.
+//! 
+//! # Example Usage
+//! ```rust
+//! fn main() {}
+//! 
+//! #[cfg(test)]
+//! mod tests {
+//!     use std::fs;
+//!     use asmov_testing::{self as testing, prelude::*};
+//! 
+//!     static TESTING: testing::StaticModule = testing::module(|| {
+//!         testing::integration(module_path!())
+//!             .using_temp_dir()
+//!             .using_fixture_dir()
+//!             .setup(|module| {
+//!                 let tmp_file = module.temp_dir()
+//!                     .join("hello.txt");
+//!                 fs::write(&tmp_file,
+//!                     "Hello, Temp").unwrap();
+//!             })
+//!             .teardown_static(teardown)
+//!             .build()
+//!     });
+//! 
+//!     extern fn teardown() {
+//!         println!("Farewell, sweet test run");
+//!     }
+//! 
+//!     #[named]
+//!     #[test]
+//!     fn test_things() {
+//!         let test = TESTING.test(function_name!())
+//!             .using_fixture_dir()  
+//!             .inherit_temp_dir()
+//!             .build();
+//! 
+//!         let temp_file = test.temp_dir()
+//!             .join("hello.txt");
+//!         let temp_text = fs::read_to_string(temp_file)
+//!             .unwrap();
+//!         assert_eq!("Hello, Temp", temp_text);
+//! 
+//!         let fixture_file = test.fixture_dir()
+//!             .join("sample.txt");
+//!         let _fixture_text = fs::read_to_string(fixture_file)
+//!             .unwrap();
+//!         assert_eq!("Hello, Fixture", _fixture_text);
+//!     }
+//! }
+//! ```
 
 pub mod namepath;
 pub mod test;
@@ -131,8 +183,11 @@ pub fn benchmark(module_path: &str) -> ModuleBuilder {
     ModuleBuilder::new(module_path, UseCase::Benchmark)
 }
 
+/// Common to all testable models (module, group, test).
 pub trait Testable {
+    /// Returns the appropriate fixture directory if configured to use one. Canonical.
     fn fixture_dir(&self) -> &Path;
+    /// Returns the fixture directory for another testable, if previous imported during configuration. Canonical.
     fn imported_fixture_dir(&self, namepath: &Namepath) -> &Path;
 }
 
