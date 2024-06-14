@@ -102,7 +102,7 @@ impl<'module,'func> GroupBuilder<'module,'func> {
         };
 
         let fixture_dir = if self.using_fixture_dir {
-            Some( crate::build_fixture_dir(&namepath, &self.module.use_case) )
+            Some( crate::build_fixture_dir(&namepath, self.module.use_case) )
         } else if self.inherit_fixture_dir {
             Some(self.module.fixture_dir().to_owned())
         } else {

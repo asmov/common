@@ -1,4 +1,4 @@
-use std::path::{PathBuf, Path};
+use std::{path::{PathBuf, Path}, hash::Hash};
 use crate::{Module, Group, UseCase};
 
 pub trait NamepathTrait {
@@ -23,18 +23,14 @@ pub trait NamepathTrait {
     }
 }
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone, Hash)]
 pub enum Namepath {
     Module(ModuleNamepath),
     Group(GroupNamepath),
     Test(TestNamepath),
 }
 
-impl Eq for Namepath {
-
-}
-
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone, Hash)]
 pub struct ModuleNamepath {
     module_path: String,
     testing_path: String
@@ -86,7 +82,7 @@ impl ModuleNamepath {
     }
 }
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone, Hash)]
 pub struct GroupNamepath {
     module_path: String,
     name: String,
@@ -128,7 +124,7 @@ impl GroupNamepath {
     }
 }
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone, Hash)]
 pub struct TestNamepath {
     module_path: String,
     group_name: Option<String>,

@@ -25,7 +25,7 @@ pub struct Module {
     pub(crate) base_temp_dir: Option<PathBuf>,
     pub(crate) temp_dir: Option<PathBuf>,
     pub(crate) fixture_dir: Option<PathBuf>,
-    pub(crate) imported_fixture_dirs: Option<HashMap<String, PathBuf>>
+    pub(crate) imported_fixture_dirs: Option<HashMap<Namepath, PathBuf>>
 }
 
 impl Module {
@@ -49,11 +49,11 @@ impl Module {
         &self.fixture_dir.as_ref().context("Module `fixture dir` is not configured").unwrap()
     }
 
-    pub fn imported_fixture_dir(&self, module_path: &str) -> &Path {
+    pub fn imported_fixture_dir(&self, namepath: &Namepath) -> &Path {
         self.imported_fixture_dirs.as_ref()
             .context("Module `shared fixture dirs` is not configured").unwrap()
-            .get(module_path)
-            .context(format!("Imported fixture dir not found for namepath: {module_path}"))
+            .get(namepath)
+            .context(format!("Imported fixture dir not found for namepath: {}", namepath.path()))
             .unwrap()
             .as_path()
     }
@@ -108,7 +108,7 @@ pub struct ModuleBuilder<'func> {
     pub(crate) base_temp_dir: PathBuf,
     pub(crate) using_temp_dir: bool,
     pub(crate) using_fixture_dir: bool,
-    pub(crate) imported_fixture_dirs: Option<HashMap<String, PathBuf>>,
+    pub(crate) imported_fixture_dirs: Option<HashMap<Namepath, PathBuf>>,
     pub(crate) setup_func: Option<Box<dyn FnOnce(&mut Module) + 'func>>,
     pub(crate) static_teardown_func: Option<Box<extern fn()>>,
     pub(crate) is_static: bool 
@@ -168,17 +168,12 @@ impl<'func> ModuleBuilder<'func> {
         };
 
         let fixture_dir = if self.using_fixture_dir {
-            Some( crate::build_fixture_dir(&namepath, &self.use_case) )
+            Some( crate::build_fixture_dir(&namepath, self.use_case) )
         } else {
             None
         };
 
-        let fixture_dir = if self.using_fixture_dir {
-//TODO: usecase???
-            Some( crate::build_fixture_dir(&namepath, &self.use_case) )
-        } else {
-            None
-        };
+        let imported_fixture_dirs = self.imported_fixture_dirs;
 
         let mut module = Module {
             namepath,
@@ -186,7 +181,7 @@ impl<'func> ModuleBuilder<'func> {
             base_temp_dir,
             temp_dir,
             fixture_dir,
-            imported_fixture_dirs: self.imported_fixture_dirs
+            imported_fixture_dirs
         };
 
         if let Some(setup_fn) = self.setup_func {
@@ -229,16 +224,22 @@ impl<'func> ModuleBuilder<'func> {
         self
     }
 
-    pub fn import_fixture_dir<P>(mut self, namepath: &str) -> Self
+    pub fn import_fixture_dir<P>(mut self, namepath: &Namepath) -> Self
     where
         P: ?Sized + AsRef<OsStr>
     {
-        let dir = make_fixture_dir(namepath);
+        let dir = crate::build_fixture_dir(&namepath, self.use_case);
         let dir = dir.canonicalize()
             .context(format!("Base temporary directory does not exist: {}", &dir.to_str().unwrap()))
             .unwrap();
 
-        self.base_temp_dir = dir;
+        if self.imported_fixture_dirs.is_none() {
+            self.imported_fixture_dirs = Some(HashMap::new());
+        }
+
+        self.imported_fixture_dirs.as_mut().expect("Option should exist")
+            .insert(namepath.to_owned(), dir);
+        
         self
     }
 

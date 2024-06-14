@@ -173,7 +173,7 @@ pub(crate) fn build_temp_dir(namepath: &Namepath, base_temp_dir: &Path) -> PathB
     temp_dir.canonicalize().unwrap()
 }
 
-pub(crate) fn build_fixture_dir(namepath: &Namepath, use_case: &UseCase) -> PathBuf {
+pub(crate) fn build_fixture_dir(namepath: &Namepath, use_case: UseCase) -> PathBuf {
     // path: ./ testing / fixtures / [ unit | integration | benchmark ] / { module } / { group ... } / { test } 
     let fixture_dir = PathBuf::from(strings::TESTING)
         .join(strings::FIXTURES)
