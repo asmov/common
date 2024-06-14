@@ -100,11 +100,16 @@ pub use module::{Module, ModuleBuilder};
 pub use group::{Group, GroupBuilder};
 pub use test::{Test, TestBuilder};
 pub use namepath::{Namepath, NamepathTrait};
-pub use function_name::named;
+
+pub mod prelude {
+    pub use function_name::named;
+    pub use crate::Testable;
+}
 
 /// A static reference to a [Module] instance.
 pub type StaticModule = Lazy<Module>;
 pub type StaticGroup<'module,'func> = Lazy<Group<'module,'func>>;
+
 
 pub const fn module(func: fn() -> Module) -> StaticModule {
     StaticModule::new(func)
@@ -124,6 +129,11 @@ pub fn integration(module_path: &str) -> ModuleBuilder {
 
 pub fn benchmark(module_path: &str) -> ModuleBuilder {
     ModuleBuilder::new(module_path, UseCase::Benchmark)
+}
+
+pub trait Testable {
+    fn fixture_dir(&self) -> &Path;
+    fn imported_fixture_dir(&self, namepath: &Namepath) -> &Path;
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]

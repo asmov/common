@@ -2,18 +2,11 @@
 //! Testing for a module
 //! This is testing
 
-use std::collections::HashMap;
-use std::ffi::OsStr;
-use std::path::{PathBuf, Path};
+use std::{collections::HashMap, ffi::OsStr, path::{PathBuf, Path}, sync::Mutex};
 use once_cell::sync::Lazy;
-use std::sync::Mutex;
 use anyhow::{self, bail, Context};
 use rand::{self, Rng};
-
-use crate::{UseCase, NamepathTrait};
-use crate::GroupBuilder;
-use crate::TestBuilder;
-use crate::namepath::Namepath;
+use crate::{UseCase, Testable, NamepathTrait, GroupBuilder, TestBuilder, namepath::Namepath};
 
 const MAX_RAND_DIR_RETRIES: i32 = 64;
 const MAX_RAND_DIR_CHARS: i32 = 8;
@@ -45,19 +38,6 @@ impl Module {
         &self.temp_dir.as_ref().context("Module `temp dir` is not configured").unwrap()
     }
 
-    pub fn fixture_dir(&self) -> &Path {
-        &self.fixture_dir.as_ref().context("Module `fixture dir` is not configured").unwrap()
-    }
-
-    pub fn imported_fixture_dir(&self, namepath: &Namepath) -> &Path {
-        self.imported_fixture_dirs.as_ref()
-            .context("Module `shared fixture dirs` is not configured").unwrap()
-            .get(namepath)
-            .context(format!("Imported fixture dir not found for namepath: {}", namepath.path()))
-            .unwrap()
-            .as_path()
-    }
-
     // Creates a GroupBuilder configured as static. This is the expected usage.
     pub fn group(&self, name: &str) -> GroupBuilder {
         GroupBuilder::new(self, name, true) 
@@ -73,12 +53,30 @@ impl Module {
         TestBuilder::new(&self, None, name)
     }
 
+    pub(crate) fn try_imported_fixture_dir(&self, namepath: &Namepath) -> anyhow::Result<&Path> {
+        Ok(self.imported_fixture_dirs.as_ref()
+            .context("Module `imported fixture dirs` is not configured")?
+            .get(namepath)
+            .context(format!("Imported fixture dir not found for namepath: {}", namepath.path()))?
+            .as_path())
+    }
+
     fn teardown(&mut self) {
         let mut teardown = Teardown {
             base_temp_dir: self.base_temp_dir.take()
         };
 
         teardown.destroy();
+    }
+}
+
+impl Testable for Module {
+    fn fixture_dir(&self) -> &Path {
+        &self.fixture_dir.as_ref().context("Module `fixture dir` is not configured").unwrap()
+    }
+
+    fn imported_fixture_dir(&self, namepath: &Namepath) -> &Path {
+        self.try_imported_fixture_dir(namepath).unwrap()
     }
 }
 
@@ -224,10 +222,7 @@ impl<'func> ModuleBuilder<'func> {
         self
     }
 
-    pub fn import_fixture_dir<P>(mut self, namepath: &Namepath) -> Self
-    where
-        P: ?Sized + AsRef<OsStr>
-    {
+    pub fn import_fixture_dir(mut self, namepath: &Namepath) -> Self {
         let dir = crate::build_fixture_dir(&namepath, self.use_case);
         let dir = dir.canonicalize()
             .context(format!("Base temporary directory does not exist: {}", &dir.to_str().unwrap()))
@@ -278,8 +273,8 @@ static STATIC_TEARDOWN_QUEUE: Lazy<Mutex<Vec<Teardown>>> = Lazy::new(|| { Mutex:
 #[cfg(test)]
 mod tests {
     use std::path::PathBuf;
+    use crate::prelude::*;
     use crate::{self as testing, NamepathTrait, UseCase, strings, namepath};
-    use function_name::named;
 
     #[test] #[should_panic]
     // Should panic if attempting to retrieve the temp_dir() without having configured one manually or by calling ensure_temp_dir().

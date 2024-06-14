@@ -1,13 +1,14 @@
-use std::path::{PathBuf, Path};
+use std::{collections::HashMap, path::{PathBuf, Path}};
 use anyhow::Context;
 
-use crate::{Module, TestBuilder, Namepath };
+use crate::{Testable, Module, TestBuilder, Namepath };
 
 pub struct Group<'module,'func> {
     pub(crate) module: &'module Module,
     pub(crate) namepath: Namepath,
     pub(crate) temp_dir: Option<PathBuf>,
     pub(crate) fixture_dir: Option<PathBuf>,
+    pub(crate) imported_fixture_dirs: Option<HashMap<Namepath, PathBuf>>,
     pub(crate) teardown_func: Option<Box<dyn FnOnce(&mut Group) + Sync + Send + 'func>>,
 }
 
@@ -35,8 +36,15 @@ impl<'module,'func> Group<'module,'func> {
         &self.temp_dir.as_ref().context("Group `temp dir` is not configured").unwrap()
     }
 
-    pub fn fixture_dir(&self) -> &Path {
-        &self.fixture_dir.as_ref().context("Group `fixture dir` is not configured").unwrap()
+    pub(crate) fn try_imported_fixture_dir(&self, namepath: &Namepath) -> anyhow::Result<&Path> {
+        if let Some(imported_fixture_dirs) = self.imported_fixture_dirs.as_ref() {
+            if let Some(dir) = imported_fixture_dirs.get(namepath) {
+                return Ok(dir.as_path());
+            }
+        }
+
+        self.module.try_imported_fixture_dir(namepath)
+            .context("Group: `imported fixture dirs` is not configured")
     }
 
     fn teardown(&mut self) {
@@ -49,6 +57,19 @@ impl<'module,'func> Group<'module,'func> {
                 eprintln!("Unable to delete temp dir: {}", dir.to_str().unwrap());
             }
         }
+    }
+}
+
+impl<'module, 'func> Testable for Group<'module, 'func> {
+    fn fixture_dir(&self) -> &Path {
+        &self.fixture_dir.as_ref().context("Group `fixture dir` is not configured").unwrap()
+    }
+    
+    fn imported_fixture_dir(&self, namepath: &Namepath) -> &Path {
+        self.imported_fixture_dirs.as_ref()
+            .context("Group: `imported fixture dirs` is not configured").unwrap()
+            .get(namepath)
+            .map_or_else(|| self.module.imported_fixture_dir(namepath), |dir| dir.as_path())
     }
 }
 
@@ -66,6 +87,7 @@ pub struct GroupBuilder<'module,'func> {
     pub(crate) inherit_temp_dir: bool,
     pub(crate) using_fixture_dir: bool,
     pub(crate) inherit_fixture_dir: bool,
+    pub(crate) imported_fixture_dirs: Option<HashMap<Namepath, PathBuf>>,
     pub(crate) setup_func: Option<Box<dyn FnOnce(&mut Group) + 'func>>,
     pub(crate) teardown_func: Option<Box<dyn FnOnce(&mut Group) + Sync + Send + 'func>>,
     pub(crate) static_teardown_func: Option<Box<extern fn()>>,
@@ -84,6 +106,7 @@ impl<'module,'func> GroupBuilder<'module,'func> {
             inherit_temp_dir: false,
             using_fixture_dir: false,
             inherit_fixture_dir: false,
+            imported_fixture_dirs: None,
             setup_func: None,
             teardown_func: None,
             static_teardown_func: None,
@@ -94,7 +117,7 @@ impl<'module,'func> GroupBuilder<'module,'func> {
         let namepath = Namepath::group(&self.module, self.name);
 
         let temp_dir = if self.using_temp_dir {
-            Some( crate::build_temp_dir(&namepath, &self.module.base_temp_dir()) )
+            Some(crate::build_temp_dir(&namepath, &self.module.base_temp_dir()))
         } else if self.inherit_temp_dir {
             Some(self.module.temp_dir().to_owned())
         } else {
@@ -102,18 +125,21 @@ impl<'module,'func> GroupBuilder<'module,'func> {
         };
 
         let fixture_dir = if self.using_fixture_dir {
-            Some( crate::build_fixture_dir(&namepath, self.module.use_case) )
+            Some(crate::build_fixture_dir(&namepath, self.module.use_case))
         } else if self.inherit_fixture_dir {
             Some(self.module.fixture_dir().to_owned())
         } else {
             None
         };
 
+        let imported_fixture_dirs = self.imported_fixture_dirs;
+
         let mut group = Group {
             module: self.module,
             namepath: namepath,
             temp_dir,
             fixture_dir,
+            imported_fixture_dirs,
             teardown_func: self.teardown_func
         };
 
@@ -181,7 +207,7 @@ impl<'module,'func> GroupBuilder<'module,'func> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{self as testing, NamepathTrait, Group};
+    use crate::{self as testing, prelude::*, NamepathTrait, Group};
     use function_name::named;
 
     static MODULE_BASIC: testing::StaticModule = testing::module(|| {

@@ -1,9 +1,6 @@
-use std::path::{PathBuf, Path};
+use std::{collections::HashMap, path::{PathBuf, Path}};
 use anyhow::Context;
-
-use crate::Module;
-use crate::Group;
-use crate::Namepath;
+use crate::{Group, Module, Namepath, Testable};
 
 pub enum Parent<'module,'group,'grpfunc> {
     Module(&'module Module),
@@ -33,6 +30,22 @@ impl<'module,'group,'grpfunc> Parent<'module,'group,'grpfunc> {
     } 
 }
 
+impl<'module,'group,'grpfnc> Testable for Parent<'group,'module,'grpfnc> {
+    fn fixture_dir(&self) -> &Path {
+        match &self {
+            Self::Module(module) => module.fixture_dir(),
+            Self::Group(group) => group.fixture_dir()
+        }
+    }
+
+    fn imported_fixture_dir(&self, namepath: &Namepath) -> &Path {
+        match &self {
+            Self::Module(module) => module.imported_fixture_dir(namepath),
+            Self::Group(group) => group.imported_fixture_dir(namepath)
+        }
+    }
+}
+
 /// A single test that can be ran.
 /// It has a parent [Module] and possibly a parent [Group], from which it may inherit settings from.
 pub struct Test<'module,'group,'grpfunc,'func> {
@@ -41,6 +54,7 @@ pub struct Test<'module,'group,'grpfunc,'func> {
     pub(crate) group: Option<&'group Group<'module,'grpfunc>>,
     pub(crate) temp_dir: Option<PathBuf>,
     pub(crate) fixture_dir: Option<PathBuf>,
+    pub(crate) imported_fixture_dirs: Option<HashMap<Namepath, PathBuf>>,
     pub(crate) teardown_func: Option<Box<dyn FnOnce(&mut Test) + 'func>>,
 }
 
@@ -81,9 +95,19 @@ impl<'module,'group,'grpfunc,'func> Test<'module,'group,'grpfunc,'func> {
         &self.temp_dir.as_ref().context("Test `temp dir` is not configured").unwrap()
     }
 
-    /// The fixture directory for this test.
-    pub fn fixture_dir(&self) -> &Path {
-        &self.fixture_dir.as_ref().context("Test `fixture dir` is not configured").unwrap()
+    pub(crate) fn try_imported_fixture_dir(&self, namepath: &Namepath) -> anyhow::Result<&Path> {
+        if let Some(imported_fixture_dirs) = self.imported_fixture_dirs.as_ref() {
+            if let Some(dir) = imported_fixture_dirs.get(namepath) {
+                return Ok(dir.as_path());
+            }
+        }
+
+        let parent_result = match self.group {
+            Some(group) => group.try_imported_fixture_dir(namepath),
+            None => self.module.try_imported_fixture_dir(namepath)
+        };
+
+        parent_result.context("Test: `imported fixture dirs` is not configured")
     }
 
     fn teardown(&mut self) {
@@ -97,6 +121,17 @@ impl<'module,'group,'grpfunc,'func> Test<'module,'group,'grpfunc,'func> {
             }
         }
 
+    }
+}
+
+impl<'module,'group,'grpfunc,'func> Testable for Test<'module,'group,'grpfunc,'func> {
+    /// The fixture directory for this test.
+    fn fixture_dir(&self) -> &Path {
+        &self.fixture_dir.as_ref().context("Test `fixture dir` is not configured").unwrap()
+    }
+
+    fn imported_fixture_dir(&self, namepath: &Namepath) -> &Path {
+        self.try_imported_fixture_dir(namepath).unwrap()
     }
 }
 
@@ -115,6 +150,7 @@ pub struct TestBuilder<'module,'group,'grpfunc,'func> {
     pub(crate) inherit_temp_dir: bool,
     pub(crate) using_fixture_dir: bool,
     pub(crate) inherit_fixture_dir: bool,
+    pub(crate) imported_fixture_dirs: Option<HashMap<Namepath, PathBuf>>,
     pub(crate) setup_func: Option<Box<dyn FnOnce(&mut Test) + 'func>>,
     pub(crate) teardown_func: Option<Box<dyn FnOnce(&mut Test) + 'func>>,
 }
@@ -133,6 +169,7 @@ TestBuilder<'module,'group,'grpfunc,'func> {
             inherit_temp_dir: false,
             using_fixture_dir: false,
             inherit_fixture_dir: false,
+            imported_fixture_dirs: None,
             setup_func: None,
             teardown_func: None,
         }
@@ -143,9 +180,9 @@ TestBuilder<'module,'group,'grpfunc,'func> {
         let namepath = Namepath::test(&self.module, self.group, self.name);
 
         let temp_dir = if self.using_temp_dir {
-            Some( crate::build_temp_dir(&namepath, &self.module.base_temp_dir()) )
+            Some(crate::build_temp_dir(&namepath, &self.module.base_temp_dir()))
         } else if self.inherit_temp_dir {
-            Some( match self.group {
+            Some(match self.group {
                 Some(group) => group.temp_dir().to_owned(),
                 None => self.module.temp_dir().to_owned() })
         } else {
@@ -153,7 +190,7 @@ TestBuilder<'module,'group,'grpfunc,'func> {
         };
 
         let fixture_dir = if self.using_fixture_dir {
-            Some( crate::build_fixture_dir(&namepath, self.module.use_case) )
+            Some(crate::build_fixture_dir(&namepath, self.module.use_case))
         } else if self.inherit_fixture_dir {
             Some( match self.group {
                 Some(group) => group.fixture_dir().to_owned(),
@@ -162,12 +199,15 @@ TestBuilder<'module,'group,'grpfunc,'func> {
             None
         };
 
+        let imported_fixture_dirs = self.imported_fixture_dirs;
+
         let mut test = Test {
             module: self.module,
             namepath,
             group: self.group,
             temp_dir,
             fixture_dir,
+            imported_fixture_dirs,
             teardown_func: self.teardown_func,
         };
 
@@ -241,8 +281,7 @@ TestBuilder<'module,'group,'grpfunc,'func> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{self as testing, NamepathTrait, Test};
-    use function_name::named;
+    use crate::{self as testing, prelude::*, NamepathTrait, Test};
 
     static MODULE_BASIC: testing::StaticModule = testing::module(|| {
         testing::unit(module_path!())
