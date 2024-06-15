@@ -6,7 +6,7 @@ use std::{collections::HashMap, ffi::OsStr, path::{PathBuf, Path}, sync::Mutex};
 use once_cell::sync::Lazy;
 use anyhow::{self, bail, Context};
 use rand::{self, Rng};
-use crate::{UseCase, Testable, NamepathTrait, GroupBuilder, TestBuilder, namepath::Namepath};
+use crate::{UseCase, Testable, TestableBuilder, NamepathTrait, GroupBuilder, TestBuilder, namepath::Namepath};
 
 const MAX_RAND_DIR_RETRIES: i32 = 64;
 const MAX_RAND_DIR_CHARS: i32 = 8;
@@ -204,6 +204,11 @@ impl<'func> ModuleBuilder<'func> {
         module
     }
 
+    pub fn using_fixture_dir(mut self) -> Self {
+        self.using_fixture_dir = true;
+        self
+    }
+
     pub fn base_temp_dir<P>(mut self, dir: &P) -> Self
     where
         P: ?Sized + AsRef<OsStr>
@@ -214,27 +219,6 @@ impl<'func> ModuleBuilder<'func> {
             .unwrap();
 
         self.base_temp_dir = dir;
-        self
-    }
-
-    pub fn using_fixture_dir(mut self) -> Self {
-        self.using_fixture_dir = true;
-        self
-    }
-
-    pub fn import_fixture_dir(mut self, namepath: &Namepath) -> Self {
-        let dir = crate::build_fixture_dir(&namepath, self.use_case);
-        let dir = dir.canonicalize()
-            .context(format!("Imported fixture dir does not exist: {}", &dir.to_str().unwrap()))
-            .unwrap();
-
-        if self.imported_fixture_dirs.is_none() {
-            self.imported_fixture_dirs = Some(HashMap::new());
-        }
-
-        self.imported_fixture_dirs.as_mut().expect("Option should exist")
-            .insert(namepath.to_owned(), dir);
-        
         self
     }
 
@@ -257,6 +241,24 @@ impl<'func> ModuleBuilder<'func> {
     pub fn nonstatic(mut self) -> Self {
         assert!(self.static_teardown_func.is_none(), "Module must be static to use a static teardown function.");
         self.is_static = false;
+        self
+    }
+}
+
+impl<'func> TestableBuilder for ModuleBuilder<'func> {
+    fn import_fixture_dir(mut self, namepath: &Namepath) -> Self {
+        let dir = crate::build_fixture_dir(&namepath, self.use_case);
+        let dir = dir.canonicalize()
+            .context(format!("Imported fixture dir does not exist: {}", &dir.to_str().unwrap()))
+            .unwrap();
+
+        if self.imported_fixture_dirs.is_none() {
+            self.imported_fixture_dirs = Some(HashMap::new());
+        }
+
+        self.imported_fixture_dirs.as_mut().expect("Option should exist")
+            .insert(namepath.to_owned(), dir);
+        
         self
     }
 }

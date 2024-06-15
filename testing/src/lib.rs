@@ -155,7 +155,7 @@ pub use namepath::{Namepath, NamepathTrait};
 
 pub mod prelude {
     pub use function_name::named;
-    pub use crate::Testable;
+    pub use crate::{Testable, TestableBuilder};
 }
 
 /// A static reference to a [Module] instance.
@@ -195,6 +195,10 @@ pub trait Testable {
     /// By default, this is based on the use-case and namepath.  
     /// The directory is created on construction and deleted upon destruction.
     fn temp_dir(&self) -> &Path;
+}
+
+pub trait TestableBuilder: Sized {
+    fn import_fixture_dir(self, namepath: &Namepath) -> Self;
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
