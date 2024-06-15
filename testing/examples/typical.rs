@@ -39,8 +39,8 @@ mod tests {
 
         let fixture_file = test.fixture_dir()
             .join("sample.txt");
-        let _fixture_text = fs::read_to_string(fixture_file)
+        let fixture_text = fs::read_to_string(fixture_file)
             .unwrap();
-        assert_eq!("Hello, Fixture", _fixture_text);
+        assert_eq!("Hello, Fixture", fixture_text);
     }
 }

@@ -132,9 +132,9 @@
 //! 
 //!         let fixture_file = test.fixture_dir()
 //!             .join("sample.txt");
-//!         let _fixture_text = fs::read_to_string(fixture_file)
+//!         let fixture_text = fs::read_to_string(fixture_file)
 //!             .unwrap();
-//!         assert_eq!("Hello, Fixture", _fixture_text);
+//!         assert_eq!("Hello, Fixture", fixture_text);
 //!     }
 //! }
 //! ```
@@ -183,12 +183,18 @@ pub fn benchmark(module_path: &str) -> ModuleBuilder {
     ModuleBuilder::new(module_path, UseCase::Benchmark)
 }
 
-/// Common to all testable models (module, group, test).
+/// Common to all testable models; [Module], [Group], [Test]).
 pub trait Testable {
-    /// Returns the appropriate fixture directory if configured to use one. Canonical.
+    /// The canonical fixture directory, if configured to use one.  
+    /// By default, this is based on the use-case and namepath
     fn fixture_dir(&self) -> &Path;
-    /// Returns the fixture directory for another testable, if previous imported during configuration. Canonical.
+    /// The canonical fixture directory for another testable, if imported during configuration.  
+    /// By default, this is based on the use-case and namepath of the referenced testable.
     fn imported_fixture_dir(&self, namepath: &Namepath) -> &Path;
+    /// The canonical temporary directory, if configured to use one.  
+    /// By default, this is based on the use-case and namepath.  
+    /// The directory is created on construction and deleted upon destruction.
+    fn temp_dir(&self) -> &Path;
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]

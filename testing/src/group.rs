@@ -32,10 +32,6 @@ impl<'module,'func> Group<'module,'func> {
         &self.namepath
     }
 
-    pub fn temp_dir(&self) -> &Path {
-        &self.temp_dir.as_ref().context("Group `temp dir` is not configured").unwrap()
-    }
-
     pub(crate) fn try_imported_fixture_dir(&self, namepath: &Namepath) -> anyhow::Result<&Path> {
         if let Some(imported_fixture_dirs) = self.imported_fixture_dirs.as_ref() {
             if let Some(dir) = imported_fixture_dirs.get(namepath) {
@@ -67,6 +63,10 @@ impl<'module, 'func> Testable for Group<'module, 'func> {
     
     fn imported_fixture_dir(&self, namepath: &Namepath) -> &Path {
         self.try_imported_fixture_dir(namepath).unwrap()
+    }
+
+    fn temp_dir(&self) -> &Path {
+        self.temp_dir.as_ref().context("Group `temp dir` is not configured").unwrap()
     }
 }
 

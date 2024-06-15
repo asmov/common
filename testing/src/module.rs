@@ -34,10 +34,6 @@ impl Module {
         &self.base_temp_dir.as_ref().context("Module `base temp dir` is not configured").unwrap()
     }
 
-    pub fn temp_dir(&self) -> &Path {
-        &self.temp_dir.as_ref().context("Module `temp dir` is not configured").unwrap()
-    }
-
     // Creates a GroupBuilder configured as static. This is the expected usage.
     pub fn group(&self, name: &str) -> GroupBuilder {
         GroupBuilder::new(self, name, true) 
@@ -72,11 +68,15 @@ impl Module {
 
 impl Testable for Module {
     fn fixture_dir(&self) -> &Path {
-        &self.fixture_dir.as_ref().context("Module `fixture dir` is not configured").unwrap()
+        self.fixture_dir.as_ref().context("Module `fixture dir` is not configured").unwrap()
     }
 
     fn imported_fixture_dir(&self, namepath: &Namepath) -> &Path {
         self.try_imported_fixture_dir(namepath).unwrap()
+    }
+
+    fn temp_dir(&self) -> &Path {
+        self.temp_dir.as_ref().context("Module `temp dir` is not configured").unwrap()
     }
 }
 

@@ -9,21 +9,21 @@ pub enum Parent<'module,'group,'grpfunc> {
 
 impl<'module,'group,'grpfunc> Parent<'module,'group,'grpfunc> {
     pub fn is_module(&self) -> bool {
-        match &self {
+        match *self {
             Self::Module(_) => true,
             _ => false
         }
     }
 
     pub fn is_group(&self) -> bool {
-        match &self {
+        match *self {
             Self::Group(_) => true,
             _ => false
         }
     } 
 
     pub fn namepath(&self) -> &Namepath {
-        match &self {
+        match *self {
             Self::Module(module) => module.namepath(), 
             Self::Group(group) => group.namepath()
         }
@@ -32,16 +32,23 @@ impl<'module,'group,'grpfunc> Parent<'module,'group,'grpfunc> {
 
 impl<'module,'group,'grpfnc> Testable for Parent<'group,'module,'grpfnc> {
     fn fixture_dir(&self) -> &Path {
-        match &self {
+        match *self {
             Self::Module(module) => module.fixture_dir(),
             Self::Group(group) => group.fixture_dir()
         }
     }
 
     fn imported_fixture_dir(&self, namepath: &Namepath) -> &Path {
-        match &self {
+        match *self {
             Self::Module(module) => module.imported_fixture_dir(namepath),
             Self::Group(group) => group.imported_fixture_dir(namepath)
+        }
+    }
+    
+    fn temp_dir(&self) -> &Path {
+        match *self {
+            Self::Module(module) => module.temp_dir(),
+            Self::Group(group) => group.temp_dir()
         }
     }
 }
@@ -90,11 +97,6 @@ impl<'module,'group,'grpfunc,'func> Test<'module,'group,'grpfunc,'func> {
         }
     }
 
-    /// The temporary directory for this test. It is created upon building of the test and deleted upon destruction.
-    pub fn temp_dir(&self) -> &Path {
-        &self.temp_dir.as_ref().context("Test `temp dir` is not configured").unwrap()
-    }
-
     pub(crate) fn try_imported_fixture_dir(&self, namepath: &Namepath) -> anyhow::Result<&Path> {
         if let Some(imported_fixture_dirs) = self.imported_fixture_dirs.as_ref() {
             if let Some(dir) = imported_fixture_dirs.get(namepath) {
@@ -125,13 +127,16 @@ impl<'module,'group,'grpfunc,'func> Test<'module,'group,'grpfunc,'func> {
 }
 
 impl<'module,'group,'grpfunc,'func> Testable for Test<'module,'group,'grpfunc,'func> {
-    /// The fixture directory for this test.
     fn fixture_dir(&self) -> &Path {
         &self.fixture_dir.as_ref().context("Test `fixture dir` is not configured").unwrap()
     }
 
     fn imported_fixture_dir(&self, namepath: &Namepath) -> &Path {
         self.try_imported_fixture_dir(namepath).unwrap()
+    }
+
+    fn temp_dir(&self) -> &Path {
+        self.temp_dir.as_ref().context("Test `temp dir` is not configured").unwrap()
     }
 }
 
