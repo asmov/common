@@ -1,5 +1,5 @@
-Licensing for Asmov Common
---------------------------------------------------------------------------------
+Asmov Common: Licensing
+================================================================================
 Asmov Common: Common libraries and tools for Asmov projects  
 Copyright (C) 2024 Asmov LLC  
 
