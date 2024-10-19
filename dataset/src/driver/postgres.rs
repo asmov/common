@@ -40,13 +40,6 @@ impl PostgresDataset {
     }
 }
 
-impl Dataset for PostgresDataset {
-    async fn gets<'d:'m, 'm, M>(&'d self, id: ID) -> Result<Option<Cow<'m, M>>>
-    where
-        Self: Sized + 'd,
-        M: MetaModel + DatasetModel<Self> + 'm {
-        todo!()
-    }
-}
+impl Dataset for PostgresDataset {}
 
 

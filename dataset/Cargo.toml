@@ -23,9 +23,9 @@ thiserror = "1"
 
 [features]
 #default = []
-#default = ["postgresql"]
+#default = ["postgres"]
 #default = ["sqlite"]
-default = ["postgresql", "sqlite"]
+default = ["postgres", "sqlite"]
 sql = []
-postgresql = ["sql", "sqlx/postgres"]
+postgres = ["sql", "sqlx/postgres"]
 sqlite = ["sql", "sqlx/sqlite"]

@@ -1,14 +1,8 @@
+/target
 
-### ASMOV IGNORES
-/.local
+# IDE
 .idea/
 .vscode/
-package-lock.json
 
-### GITHUB IGNORES: Rust
- 
-debug/
-target/
-Cargo.lock
-**/*.rs.bk
-*.pdb
+# Asmov
+/.local
