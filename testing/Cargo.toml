@@ -2,7 +2,7 @@
 name = "asmov-testing"
 version = "2.1.4"
 edition = "2021"
-description = "Creates a backup .bak copy of a file"
+description = "A toolkit for organized testing in Rust"
 authors = ["Asmov LLC <development.pub@asmov.software>"]
 license = "GPL-3.0-or-later"
 repository = "https://github.com/asmov/common"
