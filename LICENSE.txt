@@ -3,25 +3,59 @@ Copyright (C) 2024 Asmov LLC
 
 This software is comprised of four categories of components:
   - Standalone end-user applications and tools,
-  - Software libraries,
   - Server and service-hosting applications,
-  - and Multimedia files (images, videos, sounds, music, documents).
+  - Software libraries,
+  - Multimedia files,
+  - and Data files.
 
 Standalone end-user applications and tools are
 licensed under the terms of the GNU Affero Public License 3.0 (AGPL3) license.
 
-Software libraries are licensed under the terms of the
-GNU Affero Public License 3.0 (AGPL3) license.
-
 Server and service-hosting applications are licensed under the terms of
 the GNU Affero Public License 3.0 (AGPL3) license.
+
+Software libraries are licensed under the terms of the
+GNU Affero Public License 3.0 (AGPL3) license.
 
 Non-branded Multimedia files are licensed under the terms of the
 Community Commons Attribution ShareAlike 4.0 International (CC-BY-SA-4) license.
 
-You should have received copying and license files for each license with this
-software:
-  - COPYING-AGPL-3.txt and LICENSE-AGPL-3.txt
-  - COPYING-CC-BY-SA-4.txt and LICENSE-CC-BY-SA-4.txt
+Data files are licensed under the terms of the
+Community Commons Attribution ShareAlike 4.0 International (CC-BY-SA-4) license.
 
-Each package contains specific copying instructions and licensing terms. 
+Each package may contain its own specific copying instructions and licensing terms. 
+
+You should have received copying and license files for each license with this
+software. If not, please visit the URLs listed below.
+
+
+COPYING: GNU Affero Public License 3.0 (AGPL3)
+===============================================================================
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as
+published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+
+COPYING: Community Commons Attribution ShareAlike 4.0 International (CC-BY-SA-4)
+===============================================================================
+All non-branded multimedia files (audio, image, video, and document)
+provided with this software are licensed under the terms of the Community Commons
+Attribution ShareAlike 4.0 International (CC-BY-SA-4) license.
+
+This license requires that reusers give credit to the creator. It allows
+reusers to distribute, remix, adapt, and build upon the material in any
+medium or format, even for commercial purposes. If others remix, adapt,
+or build upon the material, they must license the modified material
+under identical terms.
+
+You should have received a copy of the CC-BY-SA-4 license. If not, see:
+<http://creativecommons.org/licenses/by-sa/4.0/>

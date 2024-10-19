@@ -1,9 +1,6 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::hash::{Hash, Hasher};
 
-pub const ID_ONLINE_NONE: ID = ID::Online(u64::MIN);
-pub const ID_ONLINE_RESERVED: ID = ID::Online(u64::MAX);
-
 /// Represents either a local (purely offline) or online (database) ID.
 /// Once an online ID is assigned, the former Local ID should be converted to Transitional. 
 /// Transitional IDs should never be stored persistant.
@@ -13,6 +10,12 @@ pub enum ID {
     Local(u64),
     Online(u64),
     Transitional(u64, u64)
+}
+
+impl ID {
+    pub const ONLINE_NONE: ID = ID::Online(u64::MIN);
+    pub const ONLINE_RESERVED: ID = ID::Online(u64::MAX);
+    pub const LOCAL_USER: ID = ID::Local(1);
 }
 
 pub enum OptionID {
@@ -84,11 +87,6 @@ impl ID {
 }
 
 static LOCAL_SERIAL: AtomicU64 = AtomicU64::new(101);
-
-pub mod consts {
-    use crate::*;
-    pub const LOCAL_USER_ID: ID = ID::Local(1);
-}
 
 pub fn init_local_id_generator(last_serial: u64) -> &'static AtomicU64 {
     LOCAL_SERIAL.store(last_serial, Ordering::Relaxed);

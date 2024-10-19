@@ -1,7 +1,7 @@
 use thiserror;
 
 /// Dataset errors
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, PartialEq, thiserror::Error)]
 pub enum Error {
     #[error("Database error: {0}")]
     Database(String)

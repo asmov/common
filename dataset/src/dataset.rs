@@ -19,21 +19,6 @@ pub trait Dataset {
         M::dataset_get(self, id)
     }
 
-    /*fn gets<'d:'m, 'm, M>(&'d self, id: ID) -> impl Future<Output = Result<Option<Cow<'m, M>>>> + Send + 'm
-    where
-        Self: Sized + 'd,
-        M: MetaModel + DatasetModel<Self> + 'm;*/
-
-
-
-    fn get_mut<'a, M>(&'a mut self, id: ID) -> impl Future<Output = Result<Option<&'a mut M>>> + Send + 'a
-    where
-        Self: Sized + 'a,
-        M: MetaModel + DatasetModel<Self> + 'a
-    {
-        M::dataset_get_mut(self, id)
-    }
-
     fn put<'a, M>(&'a mut self, model: M) -> impl Future<Output = Result<ID>> + Send + 'a
     where
         Self: Sized + 'a,
@@ -43,10 +28,22 @@ pub trait Dataset {
     }
 }
 
-pub trait DatasetModel<DB: Dataset>: MetaModel + Send {
-    const SCHEMA_NAME: &'static str;
+pub trait DatasetMut: Dataset {
+    /// After mutation, [MutDataset::update] must be called to process changes properly.
+    fn take<'d:'m,'m,M>(&'d mut self, id: ID) -> impl Future<Output = Result<Option<M>>> + Send + 'm
+    where
+        Self: Sized + 'd,
+        M: DatasetModelMut<Self> + 'm
+    {
+        M::dataset_take(self, id)
+    }
+}
 
+pub trait DatasetModel<DB: Dataset>: MetaModel + Send {
     fn dataset_get<'d:'m,'m>(dataset: &'d DB, id: ID) -> impl Future<Output = Result<Option<Cow<'m, Self>>>> + Send where Self: 'm;
-    fn dataset_get_mut<'d:'m,'m>(dataset: &'d mut DB, id: ID) -> impl Future<Output = Result<Option<&'m mut Self>>> + Send where Self: 'm;
     fn dataset_put<'a>(dataset: &'a mut DB, model: Self) -> impl Future<Output = Result<ID>> + Send where Self: 'a;
+}
+
+pub trait DatasetModelMut<DB: Dataset>: DatasetModel<DB> {
+    fn dataset_take<'d:'m,'m>(dataset: &'d mut DB, id: ID) -> impl Future<Output = Result<Option<Self>>> + Send + 'm where Self: 'm;
 }

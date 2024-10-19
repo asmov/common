@@ -1,9 +1,9 @@
 [package]
-name = "asmov-dataset"
+name = "asmov-common-dataset"
 version = "0.0.1"
-description = "App data modeling library"
+description = "Library for application data modeling between clients and servers"
 authors = ["Asmov LLC <development.pub@asmov.software>"]
-repository = "https://github.com/asmov/tempo"
+repository = "https://github.com/asmov/common"
 license = "AGPL-3.0-or-later"
 keywords = ["model", "db", "sql"]
 categories = []
@@ -29,3 +29,8 @@ default = ["postgres", "sqlite"]
 sql = []
 postgres = ["sql", "sqlx/postgres"]
 sqlite = ["sql", "sqlx/sqlite"]
+
+[dev-dependencies]
+asmov-testing = { path = "../testing" }
+tokio = { version = "1", features = ["full"] }
+tokio-test = "0"

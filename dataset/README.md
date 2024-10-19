@@ -1,12 +1,11 @@
-Asmov Tempo: Common Library
+Asmov Common Dataset
 ================================================================================
 [![Latest Version]][crates.io]
 
-[Latest Version]: https://img.shields.io/crates/v/asmov-tempo-lib-common.svg
-[crates.io]: https://crates.io/crates/asmov-tempo-lib-common
+[Latest Version]: https://img.shields.io/crates/v/asmov-common-dataset.svg
+[crates.io]: https://crates.io/crates/asmov-common-dataset
 
-Task timer and activity tracker that synchronizes across platforms.  
-Library featuring the common data model and utilities.
+Library for application data modeling between clients and servers.
 
 
 Repository
@@ -20,7 +19,7 @@ If an issue does not exist, create one and tell us how to reproduce the bug.
 
 License (AGPL3)
 --------------------------------------------------------------------------------
-Asmov Tempo: Task timer and activity tracker that synchronizes across platforms.  
+Asmov Common Dataset: Library for application data modeling between clients and servers.  
 Copyright (C) 2024 Asmov LLC  
 
 This program is free software: you can redistribute it and/or modify

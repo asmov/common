@@ -50,8 +50,19 @@ pub fn calculate_hash<T: Hash>(t: &T) -> Hashcode {
 }
 
 pub trait MetaModel: Sized + Hash + Clone + ToOwned<Owned = Self> {
+    const SCHEMA_NAME: &'static str;
+    const SCHEMA_NAME_PLURAL: &'static str;
+
     fn meta(&self) -> &Meta;
     fn meta_mut(&mut self) -> &mut Meta;
+
+    fn schema_name() -> &'static str {
+        Self::SCHEMA_NAME
+    }
+
+    fn schema_name_plural() -> &'static str {
+        Self::SCHEMA_NAME_PLURAL
+    }
 
     fn id(&self) -> ID {
         self.meta().id
@@ -83,6 +94,18 @@ pub trait MetaModel: Sized + Hash + Clone + ToOwned<Owned = Self> {
     }
 }
 
+pub trait MetaModelMut: MetaModel {
+    fn modify_now(&mut self) {
+        self.meta_mut().time_modified = chrono::Utc::now();
+    }
+}
+
+impl MetaModelMut for Meta {
+    fn modify_now(&mut self) {
+        self.time_modified = chrono::Utc::now();
+    }
+}
+
 /// Implements the [MetaModel] trait for a model.
 #[macro_export]
 macro_rules! boil_meta_for_model {
@@ -100,6 +123,9 @@ macro_rules! boil_meta_for_model {
 }
 
 impl MetaModel for Meta {
+    const SCHEMA_NAME: &'static str = "meta";
+    const SCHEMA_NAME_PLURAL: &'static str = "meta";
+
     fn meta(&self) -> &Meta {
         self
     }
