@@ -180,7 +180,7 @@ impl<MEM: MemoryDataset> DatasetStrategy<MEM> for StrategicDataset<MEM> {
 /// Implements the [DatasetModel] trait with [StrategicDataset] for a model.
 // Attempting to create a generic version of this runs into a Rust issue: https://github.com/rust-lang/rust/issues/100012
 #[macro_export]
-macro_rules! boil_strategic_dataset_for_model {
+macro_rules! imprint_strategic_dataset_for_model {
     ($Model:ty) => {
         impl DatasetModel<StrategicDataset> for $Model {
             const SCHEMA_NAME: &'static str = Self::SCHEMA_PLURAL;

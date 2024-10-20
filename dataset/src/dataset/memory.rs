@@ -4,7 +4,7 @@ pub trait MemoryDataset: Dataset + Default {}
 
 /// Implements the [DatasetModel] trait with [MemoryDataset] for a model. 
 #[macro_export]
-macro_rules! boil_memory_dataset_for_model {
+macro_rules! imprint_memory_dataset_for_model {
     ($MemoryDataset:ty, $Model:ty, $model_variable:ident) => {
         impl DatasetModel<$MemoryDataset> for $Model {
             const SCHEMA_NAME: &'static str = Self::SCHEMA_PLURAL;

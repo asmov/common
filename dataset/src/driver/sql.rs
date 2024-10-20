@@ -3,7 +3,7 @@ use crate::*;
 /// Implements the [DatasetModel] trait for a model.  
 /// Calls [$Dataset::standard_get] for [DatasetModel::dataset_get].
 #[macro_export]
-macro_rules! boil_sql_dataset_for_model {
+macro_rules! imprint_sql_dataset_for_model {
     ($Dataset:ty, $Model:ty) => {
         impl DatasetModel<$Dataset> for $Model {
             const SCHEMA_NAME: &'static str = Self::SCHEMA_PLURAL;

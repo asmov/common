@@ -42,7 +42,7 @@ mod tests {
         }
     }
 
-    // MACRORULE: boil_meta_for_model!($ImplModel, $schema_name, $schema_name_plural)
+    // MACRORULE: imprint_meta_for_model!($ImplModel, $schema_name, $schema_name_plural)
     impl ::asmov_common_dataset::MetaModel for ImplModel {
         const SCHEMA_NAME: &'static str = "$schema_name";
         const SCHEMA_NAME_PLURAL: &'static str = "$schema_name_plural";
@@ -67,7 +67,7 @@ mod tests {
     impl ::asmov_common_dataset::DatasetMut for ImplMemoryDataset {}
     impl ::asmov_common_dataset::MemoryDataset for ImplMemoryDataset {}
     
-    // MACRORULE: boil_memory_dataset_for_model!($ImplModel, $ImplMemoryDataset, $impl_model_variable)
+    // MACRORULE: imprint_memory_dataset_for_model!($ImplModel, $ImplMemoryDataset, $impl_model_variable)
     impl ::asmov_common_dataset::DatasetModel<ImplMemoryDataset> for ImplModel {
         async fn dataset_get<'d:'m,'m>(dataset: &'d ImplMemoryDataset, id: ::asmov_common_dataset::ID) -> ::asmov_common_dataset::Result<::std::option::Option<::std::borrow::Cow<'m, Self>>> where Self: 'm {
             Ok(dataset.impl_model_variable.get(&id).and_then(|m| Some(::std::borrow::Cow::Borrowed(m))))

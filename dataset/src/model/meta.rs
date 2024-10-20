@@ -108,7 +108,7 @@ impl MetaModelMut for Meta {
 
 /// Implements the [MetaModel] trait for a model.
 #[macro_export]
-macro_rules! boil_meta_for_model {
+macro_rules! imprint_meta_for_model {
     ($Model:ty) => {
         impl MetaModel for Timespan {
             fn meta(&self) -> &Meta {

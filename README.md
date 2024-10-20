@@ -36,7 +36,7 @@ This repository is comprised of four categories of components:
 - Standalone end-user applications and tools,
 - Server and service-hosting applications,
 - Software libraries,
-- and Multimedia files (images, videos, sounds, music, documents).
+- and Multimedia art (graphics, sounds, text, etc.).
 
 Standalone end-user applications and tools are licensed under the terms of the [GNU Affero Publice License 3.0](https://www.gnu.org/licenses/) (AGPL3) license.
 
@@ -44,7 +44,7 @@ Server and service-hosting applications are licensed under the terms of the [GNU
 
 Software libraries are licensed under the terms of the [GNU Affero Public License 3.0](https://www.gnu.org/licenses/) (AGPL3) license.
 
-SNon-branded Multimedia files are licensed under the terms of the [Community Commons Attribution ShareAlike 4.0 International](http://creativecommons.org/licenses/by-sa/4.0) (CC-BY-SA-4) license.
+Non-branded Multimedia files are licensed under the terms of the [Community Commons Attribution ShareAlike 4.0 International](http://creativecommons.org/licenses/by-sa/4.0) (CC-BY-SA-4) license.
 
 You should have received copying and license files for each license with this software:
 - [COPYING-AGPL-3](COPYING-AGPL-3.txt)

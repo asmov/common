@@ -5,8 +5,7 @@ This software is comprised of four categories of components:
   - Standalone end-user applications and tools,
   - Server and service-hosting applications,
   - Software libraries,
-  - Multimedia files,
-  - and Data files.
+  - and Multimedia art (graphics, sounds, text, etc.).
 
 Standalone end-user applications and tools are
 licensed under the terms of the GNU Affero Public License 3.0 (AGPL3) license.
@@ -18,9 +17,6 @@ Software libraries are licensed under the terms of the
 GNU Affero Public License 3.0 (AGPL3) license.
 
 Non-branded Multimedia files are licensed under the terms of the
-Community Commons Attribution ShareAlike 4.0 International (CC-BY-SA-4) license.
-
-Data files are licensed under the terms of the
 Community Commons Attribution ShareAlike 4.0 International (CC-BY-SA-4) license.
 
 Each package may contain its own specific copying instructions and licensing terms. 
