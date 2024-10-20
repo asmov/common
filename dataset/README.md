@@ -7,6 +7,15 @@ Asmov Common Dataset
 
 Library for application data modeling between clients and servers.
 
+The overall goal of this project is to allow as much code reuse as possible when dealing with both data modeling and data access between client applications and backend servers.
+
+A **dataset** groups Rust data structs from a single data domain and provides a read/write API for some protocol (in-memory, sqlite, postgres, indexdb, strategic).
+
+App and server code typically interact solely with the **strategic dataset**. This dataset  acts as an umbrella, maintaining all other local and remote datasets internally. As its name implies, it strategically selects the right internal dataset for the job, managing cache and propogating mutation automatically.
+
+A client keeps a cached in-memory dataset of models that it is using, while maintaining a connection to another dataset that is acting as a single-source-of-truth (SSOT). A client SSOT is typically either a remote backend API or a local lightweight database API such as SQLite or IndexedDB. The SSOT dataset will invalidate cache live as necessary by propogating events back through the client's strategic dataset. The strategic dataset then propogates changes through its components. Conversely, when writes occur on the client, the strategic dataset passes them through the memory dataset first, and then the SSOT dataset.
+
+On the other side, a backend server's strategy typically maintains an in-memory cache dataset and a PostgreSQL dataset. The PostgreSQL database server has extensions installed that allow the backend server's strategic dataset to invalidate cache properly and propogate those changes back to the backend server's clients.
 
 Repository
 --------------------------------------------------------------------------------
