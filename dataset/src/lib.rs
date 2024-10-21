@@ -1,6 +1,7 @@
 pub mod error;
 pub mod dataset;
 
+#[macro_use]
 pub mod macros {
     pub mod imprint;
     pub use imprint::*;
