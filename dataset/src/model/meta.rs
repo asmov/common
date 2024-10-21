@@ -145,7 +145,7 @@ impl Meta {
     pub const SCHEMA_FIELD_HASHCODE: &'static str = "hashcode";
 }
 
-#[cfg(feature = "postgresql")]
+#[cfg(feature = "postgres")]
 mod postgresql  {
     use super::*;
     use sqlx::{self, Row, postgres};

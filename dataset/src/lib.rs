@@ -1,6 +1,11 @@
 pub mod error;
 pub mod dataset;
 
+pub mod macros {
+    pub mod imprint;
+    pub use imprint::*;
+}
+
 pub use error::{Error, Result};
 
 pub mod model {
@@ -9,11 +14,7 @@ pub mod model {
 }
 
 pub mod ext {
-    pub use chrono;
     pub use derive_builder;
-}
-
-pub mod consts {
 }
 
 pub use crate::{
@@ -32,7 +33,8 @@ pub use crate::{
 pub mod prelude {
     pub use crate::{
         model::meta::{MetaModel, MetaModelMut, MetaBuilder},
-        dataset::{Dataset, DatasetMut, DatasetModel, DatasetModelMut, memory::MemoryDataset, strategy::{StrategicDataset, StrategicDatasetModel}}
+        dataset::{Dataset, DatasetMut, DatasetModel, DatasetModelMut, memory::MemoryDataset, strategy::{
+            StrategicDataset, StrategicDatasetModel}}
     };
 }
 
@@ -42,9 +44,6 @@ pub mod driver {
 
     #[cfg(feature = "sqlite")]
     pub mod sqlite;
-
-    #[cfg(feature = "sql")]
-    pub mod sql;
 }
 
 #[cfg(feature = "postgres")]
@@ -52,6 +51,3 @@ pub use crate::driver::postgres::{self, PostgresDataset};
 
 #[cfg(feature = "sqlite")]
 pub use crate::driver::sqlite::{self, SqliteDataset};
-
-#[cfg(feature = "sql")]
-pub use crate::driver::sql;
