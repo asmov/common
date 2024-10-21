@@ -106,21 +106,7 @@ impl MetaModelMut for Meta {
     }
 }
 
-/// Implements the [MetaModel] trait for a model.
-#[macro_export]
-macro_rules! imprint_meta_for_model {
-    ($Model:ty) => {
-        impl MetaModel for Timespan {
-            fn meta(&self) -> &Meta {
-                &self.meta
-            }
-            
-            fn meta_mut(&mut self) -> &mut Meta {
-                &mut self.meta
-            }
-        } 
-    };
-}
+
 
 impl MetaModel for Meta {
     const SCHEMA_NAME: &'static str = "meta";

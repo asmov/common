@@ -1,4 +1,27 @@
+//! Boilerplate macros for implementing traits for models and such.  
+//! Everything here is designed, debugged, and copied from <tests/implementation.rs>  
+//! Everything here is tested in <test/implemented.rs>  
+//! Any changes to macro code should be made and tested there, THEN copied here.
 pub use crate::*;
+
+/// Implements the [MetaModel] trait for a model.
+#[macro_export]
+macro_rules! imprint_meta_for_model {
+    ($Model:ty, $schema_name:literal, $schema_name_plural:literal) => {
+        impl MetaModel for Timespan {
+            const SCHEMA_NAME: &'static str = $schema_name;
+            const SCHEMA_NAME_PLURAL: &'static str = $schema_name_plural;
+
+            fn meta(&self) -> &Meta {
+                &self.meta
+            }
+            
+            fn meta_mut(&mut self) -> &mut Meta {
+                &mut self.meta
+            }
+        } 
+    };
+}
 
 /// Implements the [DatasetModel] trait with [StrategicDataset] for a model.
 // Attempting to create a generic version of this runs into a Rust issue: https://github.com/rust-lang/rust/issues/100011
@@ -6,8 +29,6 @@ pub use crate::*;
 macro_rules! imprint_strategic_dataset_for_model {
     ($Model:ty) => {
         impl DatasetModel<StrategicDataset> for $Model {
-            const SCHEMA_NAME: &'static str = Self::SCHEMA_PLURAL;
-
             async fn dataset_get<'d:'m,'m>(dataset: &'d StrategicDataset, id: ID) -> Result<Option<Cow<'m, Self>>> where Self: 'm {
                 for dataset_type in dataset.options.strategic_order {
                     match dataset_type {
