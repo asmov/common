@@ -43,7 +43,7 @@ macro_rules! imprint_strategic_dataset_for_model {
                 Ok(None)
             }
 
-            async fn dataset_get_mut<'d:'m,'m>(dataset: &'d mut StrategicDataset, id: ID) -> Result<Option<&'m mut Self>> {
+            /*async fn dataset_get_mut<'d:'m,'m>(dataset: &'d mut StrategicDataset, id: ID) -> Result<Option<&'m mut Self>> {
                 let dataset_type = dataset.options.strategic_order().iter();
 
                 async fn by_type<'d:'m, 'm>(dataset: &'d mut StrategicDataset, id: ID, dataset_type: DatasetType) -> Result<Option<&'m mut $Model>> {
@@ -117,7 +117,7 @@ macro_rules! imprint_strategic_dataset_for_model {
 
                 //Ok(None)
 
-            }
+            }*/
 
             async fn dataset_put<'m>(dataset: &'m mut StrategicDataset, model: Self) -> Result<ID> where Self: 'm {
                 todo!()
