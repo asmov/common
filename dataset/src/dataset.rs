@@ -14,7 +14,7 @@ pub trait Dataset {
     fn get<'a, M>(&'a self, id: ID) -> impl Future<Output = Result<Option<Cow<'a, M>>>> + Send + 'a
     where
         Self: Sized + 'a,
-        M: MetaModel + DatasetModel<Self> + 'a
+        M: DatasetModel<Self> + 'a
     {
         M::dataset_get(self, id)
     }
@@ -22,18 +22,26 @@ pub trait Dataset {
     fn put<'a, M>(&'a mut self, model: M) -> impl Future<Output = Result<ID>> + Send + 'a
     where
         Self: Sized + 'a,
-        M: MetaModel + DatasetModel<Self> + 'a
+        M: DatasetModel<Self> + 'a
     {
         M::dataset_put(self, model)
     }
+
+    fn delete<'a, M>(&'a mut self, id: ID) -> impl Future<Output = Result<()>> + Send + 'a
+    where
+        Self: Sized + 'a,
+        M: DatasetModel<Self> + 'a
+    {
+        M::dataset_delete(self, id)
+    }
 }
 
-pub trait DatasetMut: Dataset {
+pub trait DatasetDirect: Dataset {
     /// After mutation, [MutDataset::update] must be called to process changes properly.
     fn take<'d:'m,'m,M>(&'d mut self, id: ID) -> impl Future<Output = Result<Option<M>>> + Send + 'm
     where
         Self: Sized + 'd,
-        M: DatasetModelMut<Self> + 'm
+        M: DatasetModelDirect<Self> + 'm
     {
         M::dataset_take(self, id)
     }
@@ -41,9 +49,10 @@ pub trait DatasetMut: Dataset {
 
 pub trait DatasetModel<DB: Dataset>: MetaModel + Send {
     fn dataset_get<'d:'m,'m>(dataset: &'d DB, id: ID) -> impl Future<Output = Result<Option<Cow<'m, Self>>>> + Send where Self: 'm;
-    fn dataset_put<'a>(dataset: &'a mut DB, model: Self) -> impl Future<Output = Result<ID>> + Send where Self: 'a;
+    fn dataset_put<'d:'m,'m>(dataset: &'d mut DB, model: Self) -> impl Future<Output = Result<ID>> + Send where Self: 'm;
+    fn dataset_delete<'d:'m,'m>(dataset: &'d mut DB, id: ID) -> impl Future<Output = Result<()>> + Send where Self: 'm;
 }
 
-pub trait DatasetModelMut<DB: Dataset>: DatasetModel<DB> {
+pub trait DatasetModelDirect<DB: Dataset>: DatasetModel<DB> {
     fn dataset_take<'d:'m,'m>(dataset: &'d mut DB, id: ID) -> impl Future<Output = Result<Option<Self>>> + Send + 'm where Self: 'm;
 }

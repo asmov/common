@@ -11,7 +11,7 @@ mod tests {
     use std::borrow::Cow;
     use tokio;
     use chrono;
-    use asmov_common_dataset::{self as dataset, prelude::*};
+    use asmov_common_dataset::{self as dataset};
 
     #[derive(Debug, PartialEq, Eq, Clone, Hash, dataset::Builder)]
     struct ImplModel {
@@ -42,10 +42,10 @@ mod tests {
         }
     }
 
-    // MACRORULE: imprint_meta_for_model!($ImplModel, $schema_name, $schema_name_plural)
+    //MACRO: imprint_meta_for_model!($ImplModel, $schema_name, $schema_name_plural)
     impl ::asmov_common_dataset::MetaModel for ImplModel {
-        const SCHEMA_NAME: &'static str = "$schema_name";
-        const SCHEMA_NAME_PLURAL: &'static str = "$schema_name_plural";
+        const SCHEMA_NAME: &'static str = "schema_name"; //MACRO: replace "schema_name" with $schema_name
+        const SCHEMA_NAME_PLURAL: &'static str = "schema_name_plural"; //MACRO: replace "schema_name_plural" with "$schema_name_plural"
 
         fn meta(&self) -> &::asmov_common_dataset::Meta {
             &self.meta
@@ -64,7 +64,7 @@ mod tests {
     }
 
     impl ::asmov_common_dataset::Dataset for ImplMemoryDataset {}
-    impl ::asmov_common_dataset::DatasetMut for ImplMemoryDataset {}
+    impl ::asmov_common_dataset::DatasetDirect for ImplMemoryDataset {}
     impl ::asmov_common_dataset::MemoryDataset for ImplMemoryDataset {}
     
     // MACRORULE: imprint_memory_dataset_for_model!($ImplModel, $ImplMemoryDataset, $impl_model_variable)
@@ -73,52 +73,153 @@ mod tests {
             Ok(dataset.impl_model_variable.get(&id).and_then(|m| Some(::std::borrow::Cow::Borrowed(m))))
         }
 
-        async fn dataset_put<'m>(dataset: &'m mut ImplMemoryDataset, model: Self) -> ::asmov_common_dataset::Result<::asmov_common_dataset::ID> where Self: 'm {
-            let id = model.meta().id();
+        async fn dataset_put<'d:'m,'m>(dataset: &'d mut ImplMemoryDataset, model: Self) -> ::asmov_common_dataset::Result<::asmov_common_dataset::ID> where Self: 'm {
+            let id = <Self as ::asmov_common_dataset::MetaModel>::meta(&model).id();
             dataset.impl_model_variable.insert(id, model);
             Ok(id)
         }
+
+        async fn dataset_delete<'d:'m,'m>(dataset: &'d mut ImplMemoryDataset, id: ::asmov_common_dataset::ID) -> ::asmov_common_dataset::Result<()> where Self: 'm {
+            let _ = dataset.impl_model_variable.remove(&id);
+            Ok(())
+        }
     }
 
-    impl ::asmov_common_dataset::DatasetModelMut<ImplMemoryDataset> for ImplModel {
+    impl ::asmov_common_dataset::DatasetModelDirect<ImplMemoryDataset> for ImplModel {
         async fn dataset_take<'d:'m, 'm>(dataset: &'d mut ImplMemoryDataset, id: ::asmov_common_dataset::ID) -> ::asmov_common_dataset::Result<::std::option::Option<Self>> {
             Ok(dataset.impl_model_variable.remove(&id))
         }
     }
 
-    #[tokio::test]
-    async fn test_memory() {
-        let mut memory_dataset = ImplMemoryDataset::default();
-
-        assert!(matches!(memory_dataset.get::<ImplModel>(dataset::ID::Local(101)).await, Ok(None)),
-            "Memory dataset should return Ok(None) for a missing model");
-
-        let model = ImplModelBuilder::default()
+    fn fixture_model() -> ImplModel {
+        use asmov_common_dataset::{self as dataset, prelude::*};
+         ImplModelBuilder::default()
             .meta(MetaBuilder::default()
                 .id(dataset::ID::Local(101))
                 .user_id(dataset::ID::LOCAL_USER)
-                .time_created(chrono::Utc::now())
-                .time_modified(chrono::Utc::now())
+                .time_created(dataset::Timestamp::now())
+                .time_modified(dataset::Timestamp::now())
                 .build().unwrap())
             .text("Hello, world!".to_string())
             .num(42)
             .toggle(true)
             .timestamp(chrono::Utc::now())
             .build().unwrap()
-            .rehashed();
+            .rehashed()
+    }
 
+    #[tokio::test]
+    async fn test_memory() {
+        use asmov_common_dataset::{self as dataset, prelude::*};
+
+        let mut memory_dataset = ImplMemoryDataset::default();
+
+        assert!(matches!(memory_dataset.get::<ImplModel>(dataset::ID::Local(101)).await, Ok(None)),
+            "Memory dataset should return Ok(None) for a missing model");
+
+        let model = fixture_model();
+
+        // put() the model into memory and make sure that we can get() it back
         assert!(matches!(memory_dataset.put(model.clone()).await, Ok(dataset::ID::Local(101))),
             "Memory dataset should return with the expected ID after writing model");
-
         assert!(matches!(memory_dataset.get::<ImplModel>(dataset::ID::Local(101)).await, Ok(Some(m)) if m == model),
             "Memory dataset should return an exact copy of the model inserted");
 
-        // take() the model, alter it, put() it back, then get() to compare
+        // take() the model from memory, alter it, put() it back, then get() to compare
         let mut model_taken = memory_dataset.take::<ImplModel>(dataset::ID::Local(101)).await.unwrap().unwrap();
         model_taken.text = "Hello, universe!".to_string();
-        memory_dataset.put(model_taken).await.unwrap();
+        assert!(matches!(memory_dataset.put(model_taken).await, Ok(id) if id == dataset::ID::Local(101)),
+            "Memory dataset should return the same ID after modifying it");
         let model_updated = memory_dataset.get::<ImplModel>(dataset::ID::Local(101)).await.unwrap().unwrap();
         assert_eq!(model_updated.text, "Hello, universe!".to_string(),
             "Memory dataset should return the updated model after taking, altering, and putting it back");
+
+        // delete() the model from memory and make sure that we can't get() it afterwards
+        assert!(matches!(memory_dataset.delete::<ImplModel>(dataset::ID::Local(101)).await, Ok(())),
+            "Memory dataset should deleting the model and return Ok");
+        assert!(matches!(memory_dataset.get::<ImplModel>(dataset::ID::Local(101)).await, Ok(None)),
+            "Memory dataset should return Ok(None) for a missing model after deletion");
+    }
+
+    #[cfg(feature = "sqlite")]
+    mod sqlite {
+        use tokio;
+        use sqlx::{self, Row, Executor, Arguments, sqlite};
+        use super::*;
+
+        impl sqlx::FromRow<'_, sqlite::SqliteRow> for ImplModel {
+            fn from_row(row: &sqlite::SqliteRow) -> Result<Self, sqlx::Error> {
+                Ok(Self {
+                    meta: dataset::Meta::from_row(row)?,
+                    text: row.try_get("text")?,
+                    num: row.try_get("num")?,
+                    toggle: row.try_get("num")?,
+                    timestamp: row.try_get("timestamp")?,
+                })
+            }
+        }
+
+
+        /*pub trait ToArguments<DB: sqlx::Database>: dataset::MetaModel + Send {
+            fn to_arguments<'m:'q,'q>(&'m self) -> sqlx::Result<<DB as sqlx::Database>::Arguments<'q>>;
+        }
+
+        impl ToArguments<sqlite::Sqlite> for ImplModel {
+            fn to_arguments<'m:'q,'q>(&'m self) -> sqlx::Result<<sqlite::Sqlite as sqlx::Database>::Arguments<'q>> {
+                let mut args = sqlite::SqliteArguments::default();
+                args.reserve(8, 8);
+                args.add(self.meta.id().bind_online())?;
+                    .add(self.meta.user_id().bind_online())
+                    .add(self.meta.time_created().bind_online())
+                    .add(self.meta.time_modified().bind_online())
+                    .add(self.text)
+                    .add(self.num)
+                    .add(self.toggle)
+                    .add(self.timestamp)
+            }
+        }*/
+
+        impl ::asmov_common_dataset::DatasetModel<::asmov_common_dataset::SqliteDataset> for ImplModel {
+            async fn dataset_get<'d:'m,'m>(dataset: &'d ::asmov_common_dataset::SqliteDataset, id: asmov_common_dataset::ID) -> ::asmov_common_dataset::Result<std::option::Option<std::borrow::Cow<'m, Self>>> where Self: 'm {
+                ::asmov_common_dataset::SqliteDataset::standard_get(dataset, id).await
+            }
+        
+            async fn dataset_put<'d:'m,'m>(dataset: &'d mut ::asmov_common_dataset::SqliteDataset, model: Self) -> ::asmov_common_dataset::Result<::asmov_common_dataset::ID> where Self: 'm {
+                //::asmov_common_dataset::SqliteDataset::standard_insert_or_update(dataset, id).await
+                todo!()
+            }
+        
+            async fn dataset_delete<'d:'m,'m>(dataset: &'d mut ::asmov_common_dataset::SqliteDataset, id: ::asmov_common_dataset::ID) -> ::asmov_common_dataset::Result<()> where Self: 'm {
+                //::asmov_common_dataset::SqliteDataset::standard_delete(dataset, id).await
+                todo!()
+            }
+        }
+
+        #[tokio::test]
+        async fn test_sqlite() {
+            use asmov_common_dataset::{self as dataset, prelude::*};
+
+            let sqlite_pool = sqlite::SqlitePool::connect(":memory:").await.unwrap();
+            sqlite_pool.execute("CREATE TABLE schema_name (id INTEGER PRIMARY KEY, user_id INTEGER, time_created TEXT, time_modified TEXT, hashcode INTEGER, text TEXT, num INTEGER, toggle INTEGER, timestamp TEXT)").await.unwrap();
+            let mut sqlite_dataset = dataset::SqliteDataset::new(sqlite_pool);
+
+            assert!(matches!(sqlite_dataset.get::<ImplModel>(dataset::ID::Local(101)).await, Ok(None)),
+                "SQLite dataset should return Ok(None) for a missing model");
+
+            let model = fixture_model();
+
+            // put() the model into memory and make sure that we can get() it back
+            assert!(matches!(sqlite_dataset.put(model.clone()).await, Ok(dataset::ID::Local(101))),
+                "SQLite dataset should return with the expected ID after writing model");
+            assert!(matches!(sqlite_dataset.get::<ImplModel>(dataset::ID::Local(101)).await, Ok(Some(m)) if m == model),
+                "SQLite dataset should return an exact copy of the model inserted");
+
+            // delete() the model from memory and make sure that we can't get() it afterwards
+            assert!(matches!(sqlite_dataset.delete::<ImplModel>(dataset::ID::Local(101)).await, Ok(())),
+                "SQLite dataset should deleting the model and return Ok");
+            assert!(matches!(sqlite_dataset.get::<ImplModel>(dataset::ID::Local(101)).await, Ok(None)),
+                "SQLite dataset should return Ok(None) for a missing model after deletion");
+
+        }
     }
 }

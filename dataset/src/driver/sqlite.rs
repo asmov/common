@@ -1,5 +1,5 @@
 use std::borrow::Cow;
-use sqlx::{self, sqlite};
+use sqlx::{self, sqlite, Executor};
 use dataset::Dataset;
 use crate::*;
 
@@ -9,6 +9,10 @@ pub struct SqliteDataset {
 }
 
 impl SqliteDataset {
+    pub fn new(pool: sqlite::SqlitePool) -> Self {
+        Self { pool }
+    }
+
     pub fn pool(&self) -> &sqlite::SqlitePool {
         &self.pool
     }
@@ -32,6 +36,27 @@ impl SqliteDataset {
             }
         }
     }
+
+    pub async fn standard_insert_or_update<'d:'m,'m, M>(&'d self, id: ID) -> Result<Option<ID>>  
+    where
+        M: DatasetModel<Self> + 'm
+    {
+        let table = M::SCHEMA_NAME;
+        let result = sqlx::query(&format!("INSERT INTO {table} VALUES (?)"))
+            .bind(id.bind_online())
+            .execute(&self.pool)
+            .await;
+
+        
+        match result {
+            Ok(m) => Ok(None),
+            Err(e ) => match e {
+                sqlx::Error::RowNotFound => Ok(None),
+                _ => Err(Error::Database(e.to_string()))
+            }
+        }
+    }
+
 }
 
 impl Dataset for SqliteDataset {}

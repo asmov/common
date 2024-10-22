@@ -53,7 +53,7 @@ impl ID {
     /// For use with (postgre)SQL. Panics if the ID is not online.
     pub fn bind_online(self) -> i64 {
         match self {
-            ID::Local(id) => id as i64,
+            ID::Online(id) => id as i64,
             ID::Transitional(_, id) => id as i64,
             _ => panic!("Cannot convert local ID to online ID"),
         }

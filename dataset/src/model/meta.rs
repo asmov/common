@@ -1,13 +1,9 @@
-
-use std::hash::{self, Hash, Hasher};
 use derive_builder;
 use bincode;
 use serde;
 use chrono;
 use derivative;
 use crate::*;
-
-pub type Hashcode = u64;
 
 /// Database meta information that is associated with every standalone data class / database table.
 #[derive(Debug, Clone, derive_builder::Builder, derivative::Derivative, bincode::Encode, bincode::Decode, serde::Serialize, serde::Deserialize)]
@@ -16,9 +12,9 @@ pub struct Meta {
     id: ID,
     user_id: ID,
     #[bincode(with_serde)]
-    time_created: chrono::DateTime<chrono::Utc>,
+    time_created: Timestamp,
     #[bincode(with_serde)]
-    time_modified: chrono::DateTime<chrono::Utc>,
+    time_modified: Timestamp,
     #[derivative(PartialEq = "ignore")]
     #[derivative(Hash = "ignore")]
     #[builder(default)]
@@ -34,26 +30,21 @@ impl Meta {
         self.user_id
     }
 
-    pub fn time_created(&self) -> chrono::DateTime<chrono::Utc> {
+    pub fn time_created(&self) -> Timestamp {
         self.time_created
     }
 
-    pub fn time_modified(&self) -> chrono::DateTime<chrono::Utc> {
+    pub fn time_modified(&self) -> Timestamp {
         self.time_modified
     }
 }
 
-pub fn calculate_hash<T: Hash>(t: &T) -> Hashcode {
-    let mut hasher = hash::DefaultHasher::new();
-    t.hash(&mut hasher);
-    hasher.finish()
-}
-
-pub trait MetaModel: Sized + Hash + Clone + ToOwned<Owned = Self> {
+pub trait MetaModel: Sized + std::hash::Hash + Clone + ToOwned<Owned = Self> {
     const SCHEMA_NAME: &'static str;
     const SCHEMA_NAME_PLURAL: &'static str;
 
     fn meta(&self) -> &Meta;
+
     fn meta_mut(&mut self) -> &mut Meta;
 
     fn schema_name() -> &'static str {
@@ -72,11 +63,11 @@ pub trait MetaModel: Sized + Hash + Clone + ToOwned<Owned = Self> {
         self.meta().user_id
     }
 
-    fn time_created(&self) -> chrono::DateTime<chrono::Utc> {
+    fn time_created(&self) -> Timestamp {
         self.meta().time_created
     }
 
-    fn time_modified(&self) -> chrono::DateTime<chrono::Utc> {
+    fn time_modified(&self) -> Timestamp {
         self.meta().time_modified
     }
 
@@ -85,7 +76,7 @@ pub trait MetaModel: Sized + Hash + Clone + ToOwned<Owned = Self> {
     }
 
     fn rehash(&mut self) {
-        self.meta_mut().hashcode = calculate_hash(self);
+        self.meta_mut().hashcode = Hashcode::calculate_hash(self);
     }
 
     fn rehashed(mut self) -> Self {
@@ -105,8 +96,6 @@ impl MetaModelMut for Meta {
         self.time_modified = chrono::Utc::now();
     }
 }
-
-
 
 impl MetaModel for Meta {
     const SCHEMA_NAME: &'static str = "meta";
