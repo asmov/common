@@ -19,6 +19,7 @@ send-future = "0.1.0"
 serde = { version = "1", features = ["derive"] }
 # optional
 sqlx = { version = "0", optional = true, features = ["chrono", "runtime-tokio" ] }
+strum = { version = "0.26.3", features = ["derive"] }
 thiserror = "1"
 
 [features]

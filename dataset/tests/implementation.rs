@@ -73,10 +73,10 @@ mod tests {
             Ok(dataset.impl_model_variable.get(&id).and_then(|m| Some(::std::borrow::Cow::Borrowed(m))))
         }
 
-        async fn dataset_put<'d:'m,'m>(dataset: &'d mut ImplMemoryDataset, model: Self) -> ::asmov_common_dataset::Result<::asmov_common_dataset::ID> where Self: 'm {
+        async fn dataset_put<'d:'m,'m>(dataset: &'d mut ImplMemoryDataset, model: Self) -> ::asmov_common_dataset::Result<::std::option::Option<::asmov_common_dataset::ID>> where Self: 'm {
             let id = <Self as ::asmov_common_dataset::MetaModel>::meta(&model).id();
             dataset.impl_model_variable.insert(id, model);
-            Ok(id)
+            Ok(Some(id))
         }
 
         async fn dataset_delete<'d:'m,'m>(dataset: &'d mut ImplMemoryDataset, id: ::asmov_common_dataset::ID) -> ::asmov_common_dataset::Result<()> where Self: 'm {
@@ -114,21 +114,21 @@ mod tests {
 
         let mut memory_dataset = ImplMemoryDataset::default();
 
-        assert!(matches!(memory_dataset.get::<ImplModel>(dataset::ID::Local(101)).await, Ok(None)),
+        assert!(matches!(memory_dataset.get::<ImplModel>(dataset::ID::Local(101)).await.unwrap(), None),
             "Memory dataset should return Ok(None) for a missing model");
 
         let model = fixture_model();
 
         // put() the model into memory and make sure that we can get() it back
-        assert!(matches!(memory_dataset.put(model.clone()).await, Ok(dataset::ID::Local(101))),
+        assert!(matches!(memory_dataset.put(model.clone()).await.unwrap(), Some(dataset::ID::Local(101))),
             "Memory dataset should return with the expected ID after writing model");
-        assert!(matches!(memory_dataset.get::<ImplModel>(dataset::ID::Local(101)).await, Ok(Some(m)) if m == model),
+        assert!(matches!(memory_dataset.get::<ImplModel>(dataset::ID::Local(101)).await.unwrap(), Some(m) if m == model),
             "Memory dataset should return an exact copy of the model inserted");
 
         // take() the model from memory, alter it, put() it back, then get() to compare
         let mut model_taken = memory_dataset.take::<ImplModel>(dataset::ID::Local(101)).await.unwrap().unwrap();
         model_taken.text = "Hello, universe!".to_string();
-        assert!(matches!(memory_dataset.put(model_taken).await, Ok(id) if id == dataset::ID::Local(101)),
+        assert!(matches!(memory_dataset.put(model_taken).await.unwrap(), Some(id) if id == dataset::ID::Local(101)),
             "Memory dataset should return the same ID after modifying it");
         let model_updated = memory_dataset.get::<ImplModel>(dataset::ID::Local(101)).await.unwrap().unwrap();
         assert_eq!(model_updated.text, "Hello, universe!".to_string(),
@@ -177,9 +177,8 @@ mod tests {
                 ::asmov_common_dataset::SqliteDataset::standard_get(dataset, id).await
             }
         
-            async fn dataset_put<'d:'m,'m>(dataset: &'d mut ::asmov_common_dataset::SqliteDataset, model: Self) -> ::asmov_common_dataset::Result<::asmov_common_dataset::ID> where Self: 'm {
-                //::asmov_common_dataset::SqliteDataset::standard_insert_or_update(dataset, id).await
-                todo!()
+            async fn dataset_put<'d:'m,'m>(dataset: &'d mut ::asmov_common_dataset::SqliteDataset, model: Self) -> ::asmov_common_dataset::Result<::std::option::Option<::asmov_common_dataset::ID>> where Self: 'm {
+                ::asmov_common_dataset::SqliteDataset::standard_insert_or_update(dataset, &model).await
             }
         
             async fn dataset_delete<'d:'m,'m>(dataset: &'d mut ::asmov_common_dataset::SqliteDataset, id: ::asmov_common_dataset::ID) -> ::asmov_common_dataset::Result<()> where Self: 'm {
@@ -193,24 +192,24 @@ mod tests {
             use asmov_common_dataset::{self as dataset, prelude::*};
 
             let sqlite_pool = sqlite::SqlitePool::connect(":memory:").await.unwrap();
-            sqlite_pool.execute("CREATE TABLE schema_name (id INTEGER PRIMARY KEY, user_id INTEGER, time_created TEXT, time_modified TEXT, hashcode INTEGER, text TEXT, num INTEGER, toggle INTEGER, timestamp TEXT)").await.unwrap();
+            sqlite_pool.execute("CREATE TABLE schema_name (local_id INTEGER PRIMARY KEY, id INTEGER UNIQUE, user_id INTEGER, time_created TEXT, time_modified TEXT, hashcode INTEGER, text TEXT, num INTEGER, toggle INTEGER, timestamp TEXT)").await.unwrap();
             let mut sqlite_dataset = dataset::SqliteDataset::new(sqlite_pool);
 
-            assert!(matches!(sqlite_dataset.get::<ImplModel>(dataset::ID::Local(101)).await, Ok(None)),
+            assert!(matches!(sqlite_dataset.get::<ImplModel>(dataset::ID::Local(101)).await.unwrap(), None),
                 "SQLite dataset should return Ok(None) for a missing model");
 
             let model = fixture_model();
 
             // put() the model into memory and make sure that we can get() it back
-            assert!(matches!(sqlite_dataset.put(model.clone()).await, Ok(dataset::ID::Local(101))),
+            assert!(matches!(sqlite_dataset.put(model.clone()).await.unwrap(), Some(dataset::ID::Local(101))),
                 "SQLite dataset should return with the expected ID after writing model");
             assert!(matches!(sqlite_dataset.get::<ImplModel>(dataset::ID::Local(101)).await, Ok(Some(m)) if m == model),
                 "SQLite dataset should return an exact copy of the model inserted");
 
             // delete() the model from memory and make sure that we can't get() it afterwards
-            assert!(matches!(sqlite_dataset.delete::<ImplModel>(dataset::ID::Local(101)).await, Ok(())),
+            assert!(matches!(sqlite_dataset.delete::<ImplModel>(dataset::ID::Local(101)).await.unwrap(), ()),
                 "SQLite dataset should deleting the model and return Ok");
-            assert!(matches!(sqlite_dataset.get::<ImplModel>(dataset::ID::Local(101)).await, Ok(None)),
+            assert!(matches!(sqlite_dataset.get::<ImplModel>(dataset::ID::Local(101)).await.unwrap(), None),
                 "SQLite dataset should return Ok(None) for a missing model after deletion");
 
         }

@@ -39,6 +39,16 @@ impl Meta {
     }
 }
 
+#[derive(strum::Display, strum::EnumIter, strum::EnumCount)]
+#[allow(non_camel_case_types)]
+pub enum Fields {
+    id,
+    user_id,
+    time_created,
+    time_modified,
+    hashcode,
+}
+
 pub trait MetaModel: Sized + std::hash::Hash + Clone + ToOwned<Owned = Self> {
     const SCHEMA_NAME: &'static str;
     const SCHEMA_NAME_PLURAL: &'static str;

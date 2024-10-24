@@ -69,15 +69,18 @@ impl SqliteDataset {
         match model.id().into_option() {
             OptionID::None => {
                 querystr = format!("INSERT INTO {table} VALUES ({placement})");
+                println!("querystr: {}", querystr);
                 need_id = true;
             },
             OptionID::Some(ID::Authorative(_)) | OptionID::Some(ID::Mutual(_, _)) => {
-                querystr = format!("UPDATE {table} SET VALUES ({placement}) WHERE id = ? LIMIT 1");
+                querystr = format!("INSERT INTO {table} SET VALUES ({placement}) ON CONFLICT(id) DO UPDATE SET VALUES ({placement}) WHERE id = ? LIMIT 1");
+                println!("querystr: {}", querystr);
             },
             #[cfg(debug_assertions)]
             OptionID::Some(ID::Local(_)) if !self.local => panic!("Cannot SQLite UPDATE for a local ID from a non-local dataset"),
             OptionID::Some(ID::Local(_)) => {
-                querystr = format!("UPDATE {table} SET VALUES ({placement}) WHERE local_id = ? LIMIT 1");
+                querystr = format!("INSERT INTO {table} SET VALUES ({placement}) ON CONFLICT(id) DO UPDATE SET VALUES ({placement}) WHERE id = ? LIMIT 1");
+                println!("querystr: {}", querystr);
             },
             OptionID::Reserved => panic!("Cannot SQLite INSERT or UPDATE for a reserved ID"),
         }

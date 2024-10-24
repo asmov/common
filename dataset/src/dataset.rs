@@ -19,7 +19,7 @@ pub trait Dataset {
         M::dataset_get(self, id)
     }
 
-    fn put<'a, M>(&'a mut self, model: M) -> impl Future<Output = Result<ID>> + Send + 'a
+    fn put<'a, M>(&'a mut self, model: M) -> impl Future<Output = Result<Option<ID>>> + Send + 'a
     where
         Self: Sized + 'a,
         M: DatasetModel<Self> + 'a
@@ -49,7 +49,7 @@ pub trait DatasetDirect: Dataset {
 
 pub trait DatasetModel<DB: Dataset>: MetaModel + Send {
     fn dataset_get<'d:'m,'m>(dataset: &'d DB, id: ID) -> impl Future<Output = Result<Option<Cow<'m, Self>>>> + Send where Self: 'm;
-    fn dataset_put<'d:'m,'m>(dataset: &'d mut DB, model: Self) -> impl Future<Output = Result<ID>> + Send where Self: 'm;
+    fn dataset_put<'d:'m,'m>(dataset: &'d mut DB, model: Self) -> impl Future<Output = Result<Option<ID>>> + Send where Self: 'm;
     fn dataset_delete<'d:'m,'m>(dataset: &'d mut DB, id: ID) -> impl Future<Output = Result<()>> + Send where Self: 'm;
 }
 
