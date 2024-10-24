@@ -128,8 +128,8 @@ mod postgresql  {
     impl sqlx::FromRow<'_, postgres::PgRow> for Meta {
         fn from_row(row: &postgres::PgRow) -> sqlx::Result<Self> {
             Ok(Self {
-                id: ID::Online(row.try_get::<i64, _>("id")? as u64),
-                user_id: ID::Online(row.try_get::<i64, _>("user_id")? as u64),
+                id: ID::Authorative(row.try_get::<i64, _>("id")? as u64),
+                user_id: ID::Authorative(row.try_get::<i64, _>("user_id")? as u64),
                 time_created: row.try_get("time_created")?,
                 time_modified: row.try_get("time_modified")?,
                 hashcode: row.try_get::<i64, _>("hashcode")? as u64,
@@ -146,8 +146,8 @@ mod sqlite  {
     impl sqlx::FromRow<'_, sqlite::SqliteRow> for Meta {
         fn from_row(row: &sqlite::SqliteRow) -> sqlx::Result<Self> {
             Ok(Self {
-                id: ID::Online(row.try_get::<i64, _>("id")? as u64),
-                user_id: ID::Online(row.try_get::<i64, _>("user_id")? as u64),
+                id: ID::Authorative(row.try_get::<i64, _>("id")? as u64),
+                user_id: ID::Authorative(row.try_get::<i64, _>("user_id")? as u64),
                 time_created: row.try_get("time_created")?,
                 time_modified: row.try_get("time_modified")?,
                 hashcode: row.try_get::<i64, _>("hashcode")? as u64,

@@ -160,24 +160,26 @@ mod tests {
         }
 
 
-        /*pub trait ToArguments<DB: sqlx::Database>: dataset::MetaModel + Send {
-            fn to_arguments<'m:'q,'q>(&'m self) -> sqlx::Result<<DB as sqlx::Database>::Arguments<'q>>;
-        }
+        impl ::asmov_common_dataset::ToArguments<::sqlx::sqlite::Sqlite> for ImplModel {
+            fn to_arguments<'m:'q,'q>(&'m self) -> ::sqlx::Result<<::sqlx::sqlite::Sqlite as ::sqlx::Database>::Arguments<'q>> {
+                let mut args = ::sqlx::sqlite::SqliteArguments::default();
+                args.reserve(8, 8*64);
 
-        impl ToArguments<sqlite::Sqlite> for ImplModel {
-            fn to_arguments<'m:'q,'q>(&'m self) -> sqlx::Result<<sqlite::Sqlite as sqlx::Database>::Arguments<'q>> {
-                let mut args = sqlite::SqliteArguments::default();
-                args.reserve(8, 8);
-                args.add(self.meta.id().bind_online())?;
-                    .add(self.meta.user_id().bind_online())
-                    .add(self.meta.time_created().bind_online())
-                    .add(self.meta.time_modified().bind_online())
-                    .add(self.text)
-                    .add(self.num)
-                    .add(self.toggle)
-                    .add(self.timestamp)
+                args.add(self.meta.user_id().sql()).unwrap();
+                args.add(self.meta.time_created()).unwrap();
+                args.add(self.meta.time_modified()).unwrap();
+                args.add(&self.text).unwrap();
+                args.add(self.num as i64).unwrap();
+                args.add(self.toggle).unwrap();
+                args.add(self.timestamp).unwrap();
+
+                if let Some(id) = self.meta.id().best_valid_sql() {
+                    args.add(id).unwrap();
+                }
+
+                Ok(args)
             }
-        }*/
+        }
 
         impl ::asmov_common_dataset::DatasetModel<::asmov_common_dataset::SqliteDataset> for ImplModel {
             async fn dataset_get<'d:'m,'m>(dataset: &'d ::asmov_common_dataset::SqliteDataset, id: asmov_common_dataset::ID) -> ::asmov_common_dataset::Result<std::option::Option<std::borrow::Cow<'m, Self>>> where Self: 'm {

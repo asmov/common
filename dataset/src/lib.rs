@@ -18,7 +18,7 @@ pub use crate::{
     model::{
         Timestamp, TimestampTrait, Hashcode, HashcodeTrait,
         meta::{Meta, MetaModel, MetaModelMut, MetaBuilder, MetaBuilderError},
-        id::{ID, init_local_id_generator, generate_local_id},
+        id::{ID, OptionID, init_local_id_generator, generate_local_id},
     },
     dataset::{
         Dataset, DatasetModel, DatasetDirect, DatasetModelDirect,
@@ -47,3 +47,9 @@ pub use crate::driver::postgres::{self, PostgresDataset};
 
 #[cfg(feature = "sqlite")]
 pub use crate::driver::sqlite::{self, SqliteDataset};
+
+
+pub trait ToArguments<DB: sqlx::Database>: crate::MetaModel + Send {
+    fn to_arguments<'m:'q,'q>(&'m self) -> sqlx::Result<<DB as sqlx::Database>::Arguments<'q>>;
+}
+
