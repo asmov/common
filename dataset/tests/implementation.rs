@@ -158,26 +158,17 @@ mod tests {
                 })
             }
         }
-
-
+     
+        use dataset::SqlxArgumentsExtended;
+        
         impl ::asmov_common_dataset::ToArguments<::sqlx::sqlite::Sqlite> for ImplModel {
-            fn to_arguments<'m:'q,'q>(&'m self) -> ::sqlx::Result<<::sqlx::sqlite::Sqlite as ::sqlx::Database>::Arguments<'q>> {
-                let mut args = ::sqlx::sqlite::SqliteArguments::default();
-                args.reserve(8, 8*64);
-
-                args.add(self.meta.user_id().sql()).unwrap();
-                args.add(self.meta.time_created()).unwrap();
-                args.add(self.meta.time_modified()).unwrap();
-                args.add(&self.text).unwrap();
-                args.add(self.num as i64).unwrap();
-                args.add(self.toggle).unwrap();
-                args.add(self.timestamp).unwrap();
-
-                if let Some(id) = self.meta.id().best_valid_sql() {
-                    args.add(id).unwrap();
-                }
-
-                Ok(args)
+            fn to_arguments<'m:'q,'q>(&'m self) -> ::sqlx::Result<(<::sqlx::sqlite::Sqlite as ::sqlx::Database>::Arguments<'q>, usize)> {
+                ::sqlx::sqlite::SqliteArguments::start_args(8)?
+                    .arg(&self.text)?
+                    .arg(self.num as i64)?
+                    .arg(self.toggle)?
+                    .arg(self.timestamp)?
+                    .finish_args(self, 8)
             }
         }
 

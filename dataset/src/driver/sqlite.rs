@@ -61,9 +61,8 @@ impl SqliteDataset {
         M: DatasetModel<Self> + ToArguments<sqlx::sqlite::Sqlite>
     {
         let table = M::SCHEMA_NAME;
-        let arguments = model.to_arguments().unwrap();
-        let num_values = 5; //todo
-        let placement = (0..num_values).map(|_| "?").collect::<Vec<&str>>().join(", ");
+        let (arguments, num_args) = model.to_arguments().map_err(|e| Error::Database(e.to_string()))?;
+        let placement = (0..num_args).map(|_| "?").collect::<Vec<&str>>().join(", ");
         let mut need_id = false;
         let querystr;
 
