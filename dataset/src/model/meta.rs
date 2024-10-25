@@ -3,6 +3,7 @@ use bincode;
 use serde;
 use chrono;
 use derivative;
+use asmov_common_dataset_fieldenum::DatasetFieldEnum;
 use crate::*;
 
 /// Database meta information that is associated with every standalone data class / database table.
@@ -39,17 +40,18 @@ impl Meta {
     }
 }
 
-#[derive(strum::Display, strum::EnumIter, strum::EnumCount)]
-#[allow(non_camel_case_types)]
-pub enum Fields {
-    id,
-    user_id,
-    time_created,
-    time_modified,
-    hashcode,
+#[derive(asmov_common_dataset_fieldenum_derive::DatasetFieldEnum, strum::EnumIter, strum::EnumCount)]
+pub enum MetaField {
+    Id,
+    UserId,
+    TimeCreated,
+    TimeModified,
+    Hashcode,
 }
 
 pub trait MetaModel: Sized + std::hash::Hash + Clone + ToOwned<Owned = Self> {
+    type FieldEnum: asmov_common_dataset_fieldenum::DatasetFieldEnum;
+
     const SCHEMA_NAME: &'static str;
     const SCHEMA_NAME_PLURAL: &'static str;
 
@@ -93,6 +95,10 @@ pub trait MetaModel: Sized + std::hash::Hash + Clone + ToOwned<Owned = Self> {
         self.rehash();
         self
     }
+
+    fn fields() -> Self::FieldEnum::Iterator {
+        MetaField::iter()
+    }
 }
 
 pub trait MetaModelMut: MetaModel {
@@ -108,6 +114,8 @@ impl MetaModelMut for Meta {
 }
 
 impl MetaModel for Meta {
+    type FieldEnum = MetaField;
+
     const SCHEMA_NAME: &'static str = "meta";
     const SCHEMA_NAME_PLURAL: &'static str = "meta";
 

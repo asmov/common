@@ -111,6 +111,13 @@ pub(crate) fn parse_traitenum_macro(
             #(#method_outputs)*
         }
 
+        impl ::traitenum_prelude::EnumTrait for #input_ident {
+            fn footrait() -> bool {
+                true
+            }
+        }
+
+
         #(#boxed_trait_relation_iterators_outputs)*
     };
 

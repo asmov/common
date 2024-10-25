@@ -9,9 +9,21 @@
 #[cfg(test)]
 mod tests {
     use std::borrow::Cow;
+    use asmov_common_dataset_fieldenum_derive as fieldenum_derive;
     use tokio;
     use chrono;
+    use strum::IntoEnumIterator;
     use asmov_common_dataset::{self as dataset};
+    use asmov_common_dataset_fieldenum::DatasetFieldEnum;
+
+    #[derive(fieldenum_derive::DatasetFieldEnum, strum::EnumIter)]
+    pub enum ImplModelField {
+        Meta,
+        Text,
+        Num,
+        Toggle,
+        Timestamp
+    }
 
     #[derive(Debug, PartialEq, Eq, Clone, Hash, dataset::Builder)]
     struct ImplModel {
@@ -19,7 +31,7 @@ mod tests {
         text: String,
         num: u64,
         toggle: bool,
-        timestamp: chrono::DateTime<chrono::Utc>
+        timestamp: dataset::Timestamp
     }
 
     // for testing assertions
@@ -118,6 +130,8 @@ mod tests {
             "Memory dataset should return Ok(None) for a missing model");
 
         let model = fixture_model();
+
+        let field_names = ImplModelField::iter().map(|f| f.name()).collect::<Vec<_>>();
 
         // put() the model into memory and make sure that we can get() it back
         assert!(matches!(memory_dataset.put(model.clone()).await.unwrap(), Some(dataset::ID::Local(101))),

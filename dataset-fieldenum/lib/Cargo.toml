@@ -1,0 +1,18 @@
+[dependencies.traitenum]
+path = "../../traitenum/macro"
+version = "0.1.0"
+
+[dependencies.traitenum-prelude]
+path = "../../traitenum/prelude"
+version = "0.1.0"
+
+[package]
+edition = "2021"
+name = "asmov-common-dataset-fieldenum"
+version = "0.1.0"
+
+[package.metadata.traitenum]
+purpose = "lib"
+
+[[package.metadata.traitenum.trait]]
+name = "DatasetFieldEnum"

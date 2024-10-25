@@ -1,9 +1,12 @@
-Roadmap
-=======
+PLAN: TraitEnum
+===============
 
 Version 1
 ---------
-
+- Implement a common EnumTrait trait for each enum, including:
+  + type Iterator: Iterator<Item = Self>
+  + iter() -> Self::Iterator
+ 
 - Cargo addon should break each lib trait into it's own module and than pub import it.
   + Prevents generator from stomping on code documentation each time a trait is added via the cargo addon.
 - Cargo addon
@@ -35,9 +38,7 @@ Version 2
 ---------
 
 - Implement a common EnumTrait trait for each enum, including:
-  + type Iterator: Iterator<Item = Self>
   + variant_ordinal(&self) -> usize :: Num(preset(Ordinal))
-  + variant_iter() -> Self::Iterator
   + variant_name(&self) -> &'static str :: Str(preset(Variant))
   + from_variant_name(&str) -> Option<Self>
 - Common Setting: optional(bool) => allows for Option<...> methods.

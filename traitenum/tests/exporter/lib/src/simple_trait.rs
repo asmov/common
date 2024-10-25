@@ -1,7 +1,7 @@
-use traitenum::enumtrait;
+use traitenum_prelude::*;
 
 #[enumtrait]
-pub trait SimpleTrait {
+pub trait SimpleTrait: EnumTrait {
     #[enumtrait::Str(default("spunko"))]
     fn name(&self) -> &'static str;
     fn column(&self) -> usize;

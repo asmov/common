@@ -10,6 +10,8 @@ categories = []
 edition = "2021"
 
 [dependencies]
+asmov-common-dataset-fieldenum = { path = "../dataset-fieldenum/lib" }
+asmov-common-dataset-fieldenum-derive = { path = "../dataset-fieldenum/derive" }
 bincode = { version = "2.0.0-rc", features = ["serde"] }
 chrono = { version = "0", features = ["serde"] }
 derivative = "2"

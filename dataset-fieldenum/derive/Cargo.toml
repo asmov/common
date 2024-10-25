@@ -1,0 +1,15 @@
+[package]
+name = "asmov-common-dataset-fieldenum-derive"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+asmov-common-dataset-fieldenum = { version = "0.1.0", path = "../lib" }
+proc-macro2 = "1.0.89"
+traitenum-lib = { version = "0.1.0", path = "../../traitenum/lib" }
+
+[package.metadata.traitenum]
+purpose = "derive"

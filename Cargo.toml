@@ -2,7 +2,10 @@
 resolver = "2"
 members = [
     "dataset",
+    "dataset-fieldenum/lib",
+    "dataset-fieldenum/derive",
     "linux",
+    "traitenum/prelude",
     "traitenum/lib",
     "traitenum/macro",
     "traitenum/cargo",
@@ -11,3 +14,8 @@ members = [
     "traitenum/tests/importer",
     "testing"
 ]
+
+[[workspace.metadata.traitenum.library]]
+name = "dataset-fieldenum"
+lib-dir = "lib"
+derive-dir = "derive"

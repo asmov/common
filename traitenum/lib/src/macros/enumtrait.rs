@@ -30,6 +30,8 @@ pub fn enumtrait_macro(attr: proc_macro2::TokenStream, item: proc_macro2::TokenS
     let bytes_len = bytes.len();
     let bytes_literal = syn::LitByteStr::new(&bytes, tokens.span());
 
+    let model_ident = model.identifier();
+
     let output = quote::quote!{
         pub const #model_name: &'static [u8; #bytes_len] = #bytes_literal;
 
