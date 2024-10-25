@@ -1,8 +1,8 @@
-pub mod error;
-pub mod gen;
-pub mod model;
-pub mod macros;
+pub use traitenum::enumtrait;
 
-pub(crate) const TRAIT_ATTRIBUTE_HELPER_NAME: &'static str = "enumtrait";
-pub(crate) const ENUM_ATTRIBUTE_HELPER_NAME: &'static str = "traitenum";
+pub trait EnumTrait {
+    //type Iterator: Iterator<Item = Self>;
 
+    //fn iter() -> Self::Iterator;
+    fn footrait() -> bool;
+}
